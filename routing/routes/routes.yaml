@@ -1,0 +1,23 @@
+oid4vp_qrpage:
+    path: /qrpage
+    defaults:
+        _controller: 'SimpleSAML\Module\oid4vp\Controller\VerifierController::qrpage'
+    methods: [GET]
+
+oid4vp_request_uri:
+    path: /request_uri/{sessionId}
+    defaults:
+        _controller: 'SimpleSAML\Module\oid4vp\Controller\VerifierController::requestUri'
+    methods: [GET]
+
+oid4vp_direct_post:
+    path: /direct_post
+    defaults:
+        _controller: 'SimpleSAML\Module\oid4vp\Controller\VerifierController::directPost'
+    methods: [POST]
+
+oid4vp_status:
+    path: /status/{sessionId}
+    defaults:
+        _controller: 'SimpleSAML\Module\oid4vp\Controller\VerifierController::status'
+    methods: [GET]

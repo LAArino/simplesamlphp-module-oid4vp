@@ -1,0 +1,32 @@
+msgid ""
+msgstr ""
+"Content-Transfer-Encoding: 8bit\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Project-Id-Version: SimpleSAMLphp\n"
+"X-Domain: oid4vp\n"
+
+msgid "Scan the QR code with your wallet"
+msgstr "Scan the QR code with your wallet"
+
+msgid "Open your EUDI Wallet app and scan the QR code below to present your EducationalID credential."
+msgstr "Open your EUDI Wallet app and scan the QR code below to present your EducationalID credential."
+
+msgid "Waiting for credential presentation..."
+msgstr "Waiting for credential presentation..."
+
+msgid "Credential verified successfully! Redirecting..."
+msgstr "Credential verified successfully! Redirecting..."
+
+msgid "Session expired. Please try again."
+msgstr "Session expired. Please try again."
+
+msgid "Back to login options"
+msgstr "Back to login options"
+
+msgid "Open EUDI Wallet"
+msgstr "Open EUDI Wallet"
+
+msgid "Tap the button to open your wallet and present your EducationalID."
+msgstr "Tap the button to open your wallet and present your EducationalID."

@@ -1,0 +1,24 @@
+# Dependencies (install via composer install)
+/vendor/
+
+# Composer lock (consumers should generate their own)
+composer.lock
+
+# IDE / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# PHPUnit cache
+.phpunit.cache/
+.phpunit.result.cache
+
+# Ad-hoc test scripts (not part of the module)
+test_e2e.php
+test_wallet_sim.php
+
+# Claude Code
+.claude/
+CLAUDE.md

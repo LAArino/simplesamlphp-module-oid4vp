@@ -1,0 +1,162 @@
+/* Initially hidden elements — JS shows them as needed */
+.oid4vp-hidden {
+    display: none !important;
+}
+
+.oid4vp-container {
+    max-width: 480px;
+    margin: 2rem auto;
+    text-align: center;
+    padding: 1.5rem;
+}
+
+.oid4vp-container h2 {
+    margin-bottom: 0.5rem;
+    color: #333;
+    font-size: 1.4rem;
+}
+
+.oid4vp-instructions {
+    color: #666;
+    margin-bottom: 1.5rem;
+    font-size: 0.95rem;
+}
+
+#oid4vp-qr-wrapper {
+    display: inline-block;
+    padding: 1.5rem;
+    background: #fff;
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    margin-bottom: 1rem;
+    transition: opacity 0.3s;
+}
+
+#oid4vp-qr-wrapper.oid4vp-expired {
+    opacity: 0.3;
+}
+
+#oid4vp-qr-code canvas {
+    display: block;
+}
+
+/* Status indicator */
+.oid4vp-status {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    padding: 0.5rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+}
+
+.oid4vp-status-pending {
+    color: #666;
+}
+
+.oid4vp-status-success {
+    color: #2e7d32;
+    background: #e8f5e9;
+}
+
+.oid4vp-status-error {
+    color: #c62828;
+    background: #ffebee;
+}
+
+/* Spinner animation */
+.oid4vp-spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #ccc;
+    border-top-color: #666;
+    border-radius: 50%;
+    animation: oid4vp-spin 0.8s linear infinite;
+}
+
+@keyframes oid4vp-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Checkmark */
+.oid4vp-checkmark::before {
+    content: '\2713';
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: #2e7d32;
+}
+
+/* Error message */
+.oid4vp-error {
+    background: #ffebee;
+    color: #c62828;
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    margin: 1rem 0;
+    font-size: 0.9rem;
+}
+
+/* Success message */
+.oid4vp-success {
+    background: #e8f5e9;
+    color: #2e7d32;
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    margin: 1rem 0;
+    font-size: 0.9rem;
+}
+
+/* Timer */
+.oid4vp-timer {
+    margin: 0.75rem 0;
+    color: #999;
+    font-size: 0.85rem;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Back link */
+.oid4vp-actions {
+    margin-top: 1.5rem;
+}
+
+.oid4vp-back-link {
+    color: #1565c0;
+    text-decoration: none;
+    font-size: 0.9rem;
+}
+
+.oid4vp-back-link:hover {
+    text-decoration: underline;
+}
+
+/* Mobile deep link button */
+.oid4vp-mobile-link {
+    margin: 1.5rem 0;
+}
+
+.oid4vp-deeplink-button {
+    display: inline-block;
+    padding: 0.9rem 2rem;
+    background: #1565c0;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    transition: background 0.2s;
+}
+
+.oid4vp-deeplink-button:hover {
+    background: #0d47a1;
+    color: #fff;
+    text-decoration: none;
+}
+
+.oid4vp-mobile-hint {
+    color: #888;
+    font-size: 0.85rem;
+    margin-top: 0.75rem;
+}

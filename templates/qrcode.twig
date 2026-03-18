@@ -1,0 +1,61 @@
+{% set pagetitle = 'Scan the QR code with your wallet' | trans %}
+{% extends "base.twig" %}
+
+{% block preload %}
+    <link rel="stylesheet" href="{{ asset('oid4vp.css', 'oid4vp') }}">
+{% endblock %}
+
+{% block content %}
+<div class="oid4vp-container"
+     id="oid4vp-app"
+     data-openid-uri="{{ openidUri | e('html_attr') }}"
+     data-session-id="{{ sessionId | e('html_attr') }}"
+     data-status-url="{{ statusUrl | e('html_attr') }}"
+     data-qrpage-url="{{ qrpageUrl | e('html_attr') }}"
+     data-auth-state="{{ authState | e('html_attr') }}"
+     data-timeout="{{ timeout }}">
+
+    <h2>{{ 'Scan the QR code with your wallet' | trans }}</h2>
+    <p class="oid4vp-instructions">
+        {{ 'Open your EUDI Wallet app and scan the QR code below to present your EducationalID credential.' | trans }}
+    </p>
+
+    {# QR code for desktop browsers #}
+    <div id="oid4vp-qr-wrapper">
+        <div id="oid4vp-qr-code"></div>
+        <div id="oid4vp-status" class="oid4vp-status oid4vp-status-pending">
+            <span id="oid4vp-status-icon" class="oid4vp-spinner"></span>
+            <span id="oid4vp-status-text">{{ 'Waiting for credential presentation...' | trans }}</span>
+        </div>
+    </div>
+
+    {# Deep link button for mobile — shown via JS when mobile UA detected #}
+    <div id="oid4vp-mobile-link" class="oid4vp-mobile-link oid4vp-hidden">
+        <a id="oid4vp-deeplink-btn" href="#" class="oid4vp-deeplink-button">
+            {{ 'Open EUDI Wallet' | trans }}
+        </a>
+        <p class="oid4vp-mobile-hint">{{ 'Tap the button to open your wallet and present your EducationalID.' | trans }}</p>
+    </div>
+
+    <div id="oid4vp-error" class="oid4vp-error oid4vp-hidden">
+        <p id="oid4vp-error-text"></p>
+    </div>
+
+    <div id="oid4vp-success" class="oid4vp-success oid4vp-hidden">
+        <p>{{ 'Credential verified successfully! Redirecting...' | trans }}</p>
+    </div>
+
+    <div class="oid4vp-timer">
+        <span id="oid4vp-timer-text"></span>
+    </div>
+
+    <div class="oid4vp-actions">
+        <a href="{{ backUrl | default('#') }}" class="oid4vp-back-link">
+            {{ 'Back to login options' | trans }}
+        </a>
+    </div>
+</div>
+
+<script src="{{ asset('qrcode.min.js', 'oid4vp') }}"></script>
+<script src="{{ asset('oid4vp.js', 'oid4vp') }}"></script>
+{% endblock %}

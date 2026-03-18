@@ -1,0 +1,34 @@
+{
+    "name": "laarino/simplesamlphp-module-oid4vp",
+    "description": "OID4VP (OpenID for Verifiable Presentations) authentication source for SimpleSAMLphp",
+    "type": "simplesamlphp-module",
+    "license": "EUPL-1.2",
+    "require": {
+        "php": ">=8.0",
+        "ext-gmp": "*",
+        "ext-openssl": "*",
+        "firebase/php-jwt": "^6.0 || ^7.0",
+        "guzzlehttp/guzzle": "^7.0",
+        "ramsey/uuid": "^4.0",
+        "simplesamlphp/simplesamlphp": "^2.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "SimpleSAML\\Module\\oid4vp\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "SimpleSAML\\Test\\Module\\oid4vp\\": "tests/"
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "simplesamlphp/composer-xmlprovider-installer": true,
+            "simplesamlphp/composer-module-installer": true
+        }
+    }
+}

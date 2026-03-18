@@ -1,0 +1,34 @@
+{
+    "title_scan_qr": {
+        "en": "Scan the QR code with your wallet",
+        "es": "Escanea el código QR con tu wallet"
+    },
+    "instructions_scan": {
+        "en": "Open your EUDI Wallet app and scan the QR code below to present your EducationalID credential.",
+        "es": "Abre tu aplicación EUDI Wallet y escanea el código QR para presentar tu credencial EducationalID."
+    },
+    "status_waiting": {
+        "en": "Waiting for credential presentation...",
+        "es": "Esperando presentación de credencial..."
+    },
+    "status_verified": {
+        "en": "Credential verified successfully! Redirecting...",
+        "es": "Credencial verificada correctamente. Redirigiendo..."
+    },
+    "status_expired": {
+        "en": "Session expired. Please try again.",
+        "es": "Sesión expirada. Por favor, inténtalo de nuevo."
+    },
+    "back_to_login": {
+        "en": "Back to login options",
+        "es": "Volver a opciones de login"
+    },
+    "open_wallet": {
+        "en": "Open EUDI Wallet",
+        "es": "Abrir EUDI Wallet"
+    },
+    "mobile_hint": {
+        "en": "Tap the button to open your wallet and present your EducationalID.",
+        "es": "Pulsa el botón para abrir tu wallet y presentar tu EducationalID."
+    }
+}
