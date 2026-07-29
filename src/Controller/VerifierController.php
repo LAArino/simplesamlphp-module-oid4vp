@@ -369,8 +369,15 @@ class VerifierController
         // The selector loads the state under MultiAuth's own stage, so the id we
         // saved for the QR page ('oid4vp:auth') is rejected with "Wrong stage in
         // state". Save a second copy under the stage the selector expects.
+        //
+        // The copy must drop Auth\State::ID first: saveState() reuses an id that
+        // is already present, so saving in place would overwrite the QR page's
+        // own state with the selector's stage and break completion.
+        $backState = $state;
+        unset($backState[Auth\State::ID]);
+
         $backStateId = Auth\State::saveState(
-            $state,
+            $backState,
             '\SimpleSAML\Module\multiauth\Auth\Source\MultiAuth.StageId'
         );
 
