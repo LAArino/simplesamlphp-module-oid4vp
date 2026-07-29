@@ -43,14 +43,16 @@ class PresentationVerifier
         string $verifierId,
         array $trustedIssuers = [],
         ?string $ebsiTrustRegistry = null,
-        ?\GuzzleHttp\Client $httpClient = null
+        ?\GuzzleHttp\Client $httpClient = null,
+        array $trustNetworks = []
     ) {
         $this->verifierId = $verifierId;
         $this->jwtHandler = new JwtHandler();
         $this->trustResolver = new TrustChainResolver(
             $trustedIssuers,
             $ebsiTrustRegistry,
-            $httpClient
+            $httpClient,
+            $trustNetworks
         );
     }
 

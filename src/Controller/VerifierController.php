@@ -87,6 +87,7 @@ class VerifierController
             'presentation_definition_type' => $state['oid4vp:presentation_definition_type'] ?? 'VerifiableEducationalID',
             'trusted_issuers' => $state['oid4vp:trusted_issuers'] ?? [],
             'ebsi_trust_registry' => $state['oid4vp:ebsi_trust_registry'] ?? null,
+            'trust_networks' => $state['oid4vp:trust_networks'] ?? [],
         ];
         $sessionData = $store->create($authStateId, $verifierConfig);
 
@@ -225,7 +226,9 @@ class VerifierController
         $verifier = new PresentationVerifier(
             $verifierId,
             $trustedIssuers,
-            $ebsiTrustRegistry
+            $ebsiTrustRegistry,
+            null,
+            $vc['trust_networks'] ?? []
         );
 
         try {

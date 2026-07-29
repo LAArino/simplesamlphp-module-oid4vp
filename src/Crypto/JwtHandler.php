@@ -129,7 +129,11 @@ class JwtHandler
     /**
      * Resolve did:key — the public key is embedded in the DID itself.
      *
-     * For P-256 (ES256), the multicodec prefix is 0x1200 (varint: 0x80 0x24).
+     * Two multicodec encodings are supported:
+     *   0x1200 (varint 0x80 0x24) — compressed P-256 public key (standard did:key)
+     *   0xeb51 (varint 0xD1 0xD6 0x03) — jwk_jcs-pub: JCS-canonicalized JWK
+     *     as UTF-8 JSON (EBSI natural-person did:key format)
+     *
      * The key is base58btc-encoded with 'z' prefix (multibase).
      */
     private function resolveDidKey(string $did): Key
@@ -146,7 +150,7 @@ class JwtHandler
         }
 
         // Check multicodec varint prefix for P-256 (0x1200 → varint 0x80 0x24)
-        $prefix = unpack('C2', $decoded);
+        $prefix = unpack('C3', $decoded);
         if ($prefix[1] === 0x80 && $prefix[2] === 0x24) {
             // P-256 compressed public key (33 bytes after 2-byte prefix)
             $compressedKey = substr($decoded, 2);
@@ -157,7 +161,31 @@ class JwtHandler
             return JWK::parseKey($jwk, 'ES256');
         }
 
+        // jwk_jcs-pub (0xeb51 → varint 0xD1 0xD6 0x03): EBSI did:key format
+        if ($prefix[1] === 0xd1 && $prefix[2] === 0xd6 && $prefix[3] === 0x03) {
+            return $this->jwkJcsPubToKey(substr($decoded, 3));
+        }
+
         throw new VerificationException('Unsupported did:key curve (only P-256/ES256 supported)');
+    }
+
+    /**
+     * Parse a jwk_jcs-pub payload (JCS-canonicalized JWK as UTF-8 JSON) into a Key.
+     */
+    private function jwkJcsPubToKey(string $jwkJson): Key
+    {
+        $jwk = json_decode($jwkJson, true);
+        if (!is_array($jwk)) {
+            throw new VerificationException('Invalid jwk_jcs-pub did:key: malformed JWK JSON');
+        }
+
+        if (($jwk['kty'] ?? null) !== 'EC' || ($jwk['crv'] ?? null) !== 'P-256') {
+            throw new VerificationException(
+                'Unsupported jwk_jcs-pub key type (only EC P-256/ES256 supported)'
+            );
+        }
+
+        return JWK::parseKey($jwk, 'ES256');
     }
 
     /**

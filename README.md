@@ -57,7 +57,8 @@ Designed for universities and educational institutions.
 
 - **OID4VP protocol** — JWT Authorization Request (JAR) + Direct Post response mode
 - **ES256 cryptography** — P-256 elliptic curve for JWT signing and verification
-- **DID resolution** — `did:key` (day 1), `did:ebsi` (planned)
+- **DID resolution** — `did:key` (including the EBSI `jwk_jcs-pub` format), `did:jwk`, `did:web`, `did:ebsi`, `did:blue`
+- **Trust networks** — EBSI (Pilot + RedIRIS mirror + Conformance) and BLUE (PROD/PRE/DES) built in, with per-network DID Registry and Trusted Issuers Registry, retry chains, and 48h disk cache
 - **W3C Verifiable Credentials** — Supports W3C-VC in JWT format (Verifiable Presentations and Verifiable Credentials)
 - **12-step verification pipeline** — VP signature, VC signature, nonce, audience, expiry, issuer trust
 - **VC → SAML attribute mapping** — Friendly names (`cn`, `mail`, `eduPersonPrincipalName`) and OID format (`urn:oid:...`)
@@ -177,18 +178,21 @@ A simulated wallet script is available at `tests/test_wallet.php` for end-to-end
 
 ### Roadmap
 
-**Day 1 (current):**
-- [x] `did:key` resolution
+**Current:**
+- [x] `did:key` resolution (multicodec `0x1200` and EBSI `jwk_jcs-pub` `0xeb51`)
+- [x] `did:jwk` and `did:web` resolution
+- [x] `did:ebsi` resolution via EBSI DID Registry (Pilot + RedIRIS mirror + Conformance)
+- [x] `did:blue` resolution via BLUE DID Registry (PROD/PRE/DES chain)
+- [x] EBSI and BLUE Trusted Issuers Registry integration
 - [x] Static trusted issuers list
 - [x] File-based and SQL session storage
 - [x] Friendly name and OID attribute mapping
 - [x] Mobile deep-link support
 
-**Day 2+ (planned):**
-- [ ] `did:ebsi` resolution via EBSI DID Registry
-- [ ] EBSI Trusted Issuers Registry integration
+**Planned:**
 - [ ] StatusList2021 revocation checking
 - [ ] Multiple credential type support
+- [ ] SD-JWT VC, DCQL and JARM (`direct_post.jwt`) support
 
 ### License
 
@@ -242,7 +246,8 @@ Diseñado para universidades e instituciones educativas.
 
 - **Protocolo OID4VP** — JWT Authorization Request (JAR) + modo de respuesta Direct Post
 - **Criptografía ES256** — Curva elíptica P-256 para firma y verificación de JWT
-- **Resolución DID** — `did:key` (día 1), `did:ebsi` (planificado)
+- **Resolución DID** — `did:key` (incluido el formato EBSI `jwk_jcs-pub`), `did:jwk`, `did:web`, `did:ebsi`, `did:blue`
+- **Redes de confianza** — EBSI (Pilot + espejo RedIRIS + Conformance) y BLUE (PROD/PRE/DES) integradas, con Registro DID y Trusted Issuers Registry por red, cadenas de reintento y caché en disco de 48h
 - **Credenciales Verificables W3C** — Soporta W3C-VC en formato JWT (Verifiable Presentations y Verifiable Credentials)
 - **Pipeline de verificación de 12 pasos** — Firma VP, firma VC, nonce, audiencia, expiración, confianza del emisor
 - **Mapeo VC → atributos SAML** — Nombres amigables (`cn`, `mail`, `eduPersonPrincipalName`) y formato OID (`urn:oid:...`)
@@ -362,18 +367,21 @@ Hay un script de wallet simulada en `tests/test_wallet.php` para testing manual 
 
 ### Hoja de ruta
 
-**Día 1 (actual):**
-- [x] Resolución `did:key`
+**Actual:**
+- [x] Resolución `did:key` (multicodec `0x1200` y EBSI `jwk_jcs-pub` `0xeb51`)
+- [x] Resolución `did:jwk` y `did:web`
+- [x] Resolución `did:ebsi` vía EBSI DID Registry (Pilot + espejo RedIRIS + Conformance)
+- [x] Resolución `did:blue` vía BLUE DID Registry (cadena PROD/PRE/DES)
+- [x] Integración con los Trusted Issuers Registry de EBSI y BLUE
 - [x] Lista estática de emisores confiables
 - [x] Almacenamiento de sesión en archivos y SQL
 - [x] Mapeo de atributos en nombres amigables y OID
 - [x] Soporte deep-link en móvil
 
-**Día 2+ (planificado):**
-- [ ] Resolución `did:ebsi` vía EBSI DID Registry
-- [ ] Integración con EBSI Trusted Issuers Registry
+**Planificado:**
 - [ ] Verificación de revocación StatusList2021
 - [ ] Soporte para múltiples tipos de credencial
+- [ ] Soporte SD-JWT VC, DCQL y JARM (`direct_post.jwt`)
 
 ### Licencia
 

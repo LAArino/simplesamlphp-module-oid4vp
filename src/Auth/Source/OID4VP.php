@@ -49,6 +49,7 @@ class OID4VP extends Auth\Source
     private int $sessionTimeout;
     private array $trustedIssuers;
     private ?string $ebsiTrustRegistry;
+    private array $trustNetworks;
     private bool $useOidFormat;
     private array $attributeMap;
 
@@ -66,6 +67,7 @@ class OID4VP extends Auth\Source
         $this->sessionTimeout = $config['session_timeout'] ?? 300;
         $this->trustedIssuers = $config['trusted_issuers'] ?? [];
         $this->ebsiTrustRegistry = $config['ebsi_trust_registry'] ?? null;
+        $this->trustNetworks = $config['trust_networks'] ?? [];
         $this->useOidFormat = $config['use_oid_format'] ?? false;
         $this->attributeMap = $config['attribute_map'] ?? [];
     }
@@ -86,6 +88,7 @@ class OID4VP extends Auth\Source
         $state['oid4vp:session_timeout'] = $this->sessionTimeout;
         $state['oid4vp:trusted_issuers'] = $this->trustedIssuers;
         $state['oid4vp:ebsi_trust_registry'] = $this->ebsiTrustRegistry;
+        $state['oid4vp:trust_networks'] = $this->trustNetworks;
         $state['oid4vp:use_oid_format'] = $this->useOidFormat;
         $state['oid4vp:attribute_map'] = $this->attributeMap;
         $state['oid4vp:presentation_definition_type'] = $this->presentationDefinitionType;

@@ -35,10 +35,15 @@ $config = [
         'credential_type' => 'VerifiableEducationalID',
     ],
 
-    // Static list of trusted VC issuer DIDs.
-    // If empty and no EBSI registry is configured, all issuers are accepted (dev mode).
+    // Static list of trusted VC issuer DIDs, always checked first.
+    // Issuers whose DID method belongs to a trust network (did:ebsi, did:blue)
+    // are additionally checked against that network's Trusted Issuers Registry.
+    // Dev mode: an issuer whose DID method has NO network (e.g. did:key) is
+    // accepted with a warning when this list is empty and no legacy registry
+    // is configured.
     'trusted_issuers' => [
         // 'did:ebsi:z...',
+        // 'did:blue:z...',
         // 'did:key:z...',
     ],
 
@@ -49,12 +54,32 @@ $config = [
         // 'familyName' => 'sn',
     ],
 
-    // EBSI configuration (disabled by default — day 1 uses did:key + static trust).
-    'ebsi' => [
-        'enabled' => false,
-        'did_registry' => 'https://api-pilot.ebsi.eu/did-registry/v5',
-        'trust_registry' => 'https://api-pilot.ebsi.eu/trusted-issuers-registry/v5',
-        'schema_registry' => 'https://api-pilot.ebsi.eu/trusted-schemas-registry/v3',
-        // 'proxy' => 'https://api-pilot.ebsi.eu/proxy',  // For StatusList2021 revocation
+    // Trust networks: maps DID method prefixes to their registry APIs.
+    // EBSI (did:ebsi) and BLUE (did:blue) are built in with these defaults:
+    //
+    //   did:ebsi — EBSI Pilot (api-pilot.ebsi.eu/{did-registry,trusted-issuers-registry}/v5)
+    //              + RedIRIS mirror fallback (api-pilot.ebsi.rediris.es) on network errors
+    //              + Conformance alternate (api-conformance.ebsi.eu) on 404
+    //   did:blue — BLUE PROD (api.blue.rediris.es/{did-registry,trusted-issuers-registry}/v5)
+    //              + PRE (api-pre.blue.rediris.es) and DES (api-des.blue.rediris.es)
+    //                alternates on 404
+    //
+    // Only add entries here to OVERRIDE a built-in network or ADD a new one;
+    // an entry replaces the built-in entry for the same DID method prefix.
+    'trust_networks' => [
+        // 'did:blue' => [
+        //     'name' => 'BLUE',
+        //     'config' => [
+        //         'did_registry_url' => 'https://api-pre.blue.rediris.es/did-registry/v5',
+        //         'trusted_issuers_registry_url' => 'https://api-pre.blue.rediris.es/trusted-issuers-registry/v5',
+        //         'trusted_schemas_registry_url' => 'https://api-pre.blue.rediris.es/trusted-schemas-registry/v3',
+        //         'label' => 'PRE',
+        //     ],
+        //     'alternate_configs' => [],
+        // ],
     ],
+
+    // Legacy: single-URL Trusted Issuers Registry, checked for issuers whose
+    // DID method has no trust network entry. Prefer 'trust_networks' above.
+    // 'ebsi_trust_registry' => 'https://api-pilot.ebsi.eu/trusted-issuers-registry/v5',
 ];
