@@ -124,6 +124,7 @@ if ($jarPayload === null) {
 
 echo "\nClaims del JAR:\n";
 echo "  iss:           " . ($jarPayload['iss'] ?? '-') . "\n";
+echo "  client_id:     " . ($jarPayload['client_id'] ?? '-') . "\n";
 echo "  aud:           " . ($jarPayload['aud'] ?? '-') . "\n";
 echo "  response_type: " . ($jarPayload['response_type'] ?? '-') . "\n";
 echo "  response_mode: " . ($jarPayload['response_mode'] ?? '-') . "\n";
@@ -137,7 +138,9 @@ echo "\n";
 $nonce = $jarPayload['nonce'] ?? null;
 $state = $jarPayload['state'] ?? null;
 $responseUri = $jarPayload['response_uri'] ?? null;
-$verifierId = $jarPayload['iss'] ?? null;
+// Real wallets take the audience from client_id, not iss — mirror that so this
+// simulator exercises the same claim they do. iss is only a fallback.
+$verifierId = $jarPayload['client_id'] ?? $jarPayload['iss'] ?? null;
 
 if (!$nonce || !$state || !$responseUri) {
     echo "ERROR: JAR incompleto (falta nonce, state o response_uri)\n";

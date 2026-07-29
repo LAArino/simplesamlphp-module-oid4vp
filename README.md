@@ -190,6 +190,15 @@ The module maps `credentialSubject` fields from the Verifiable Credential to SAM
 
 Custom mappings can be defined in the `attribute_map` configuration option.
 
+A presentation must carry the fields the EducationalID schema itself marks as required
+(`id`, `identifier`, `eduPersonScopedAffiliation`); everything else is optional. Deployments
+whose service providers need more can list them in `required_attributes` — but note that
+demanding more than the schema does rejects credentials that are perfectly valid.
+
+`eduPersonTargetedID` is derived as `md5(credentialSubject.id)`. It is stable per subject
+but **not** per relying party, so it does not provide the pairwise privacy that the
+attribute's name implies.
+
 ### Testing
 
 ```bash
@@ -222,10 +231,14 @@ A simulated wallet script is available at `tests/test_wallet.php` for end-to-end
 - [x] Friendly name and OID attribute mapping
 - [x] Mobile deep-link support
 
+Verified end to end against BLUE and EBSI EducationalID credentials presented from a
+real EUDI wallet.
+
 **Planned:**
 - [ ] StatusList2021 revocation checking
-- [ ] Multiple credential type support
+- [ ] Multiple credential types per authentication source (today one type per source)
 - [ ] SD-JWT VC, DCQL and JARM (`direct_post.jwt`) support
+- [ ] Per-relying-party `eduPersonTargetedID`
 
 ### License
 
@@ -412,6 +425,15 @@ El módulo mapea los campos `credentialSubject` de la Verifiable Credential a at
 
 Se pueden definir mapeos personalizados en la opción de configuración `attribute_map`.
 
+Una presentación debe traer los campos que el propio esquema EducationalID marca como
+obligatorios (`id`, `identifier`, `eduPersonScopedAffiliation`); el resto son opcionales.
+Los despliegues cuyos proveedores de servicio necesiten más pueden declararlos en
+`required_attributes` — pero exigir más que el esquema rechaza credenciales válidas.
+
+`eduPersonTargetedID` se deriva como `md5(credentialSubject.id)`. Es estable por sujeto
+pero **no** por proveedor de servicio, así que no aporta la privacidad por pares que
+sugiere el nombre del atributo.
+
 ### Testing
 
 ```bash
@@ -444,10 +466,14 @@ Hay un script de wallet simulada en `tests/test_wallet.php` para testing manual 
 - [x] Mapeo de atributos en nombres amigables y OID
 - [x] Soporte deep-link en móvil
 
+Verificado de extremo a extremo con credenciales EducationalID de BLUE y de EBSI
+presentadas desde una wallet EUDI real.
+
 **Planificado:**
 - [ ] Verificación de revocación StatusList2021
-- [ ] Soporte para múltiples tipos de credencial
+- [ ] Varios tipos de credencial por fuente de autenticación (hoy, uno por fuente)
 - [ ] Soporte SD-JWT VC, DCQL y JARM (`direct_post.jwt`)
+- [ ] `eduPersonTargetedID` por proveedor de servicio
 
 ### Licencia
 

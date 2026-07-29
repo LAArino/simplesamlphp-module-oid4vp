@@ -570,6 +570,12 @@ curl -k -s "$BASE/request_uri/$SESSION_ID" \
 
 # Inspeccionar el JAR (decodificar payload sin verificar)
 cat jar.jwt | cut -d. -f2 | base64 -d 2>/dev/null | python3 -m json.tool
+# Claims relevantes:
+#   iss / client_id -> el verifier_id configurado. Las wallets devuelven client_id
+#                      como 'aud' del VP, y el verificador lo comprueba (paso 5 del
+#                      pipeline): si falta, TODA presentacion falla por audiencia.
+#   response_uri    -> URL de /direct_post; debe ser alcanzable desde la wallet
+#   nonce / state   -> nonce se valida en el VP; state enlaza con la sesion
 
 # Paso 2: Comprobar estado (deberia ser "pending")
 curl -k -s "$BASE/status/$SESSION_ID" | python3 -m json.tool
@@ -719,11 +725,22 @@ Enviar una VP con un VC que no sea `VerifiableEducationalID`:
 
 ### 10.4 Campos requeridos faltantes
 
-Enviar un VC con `credentialSubject` que no tenga `eduPersonPrincipalName`, `schacHomeOrganization` o `displayName`:
+Enviar un VC cuyo `credentialSubject` no tenga alguno de los campos que el esquema
+EducationalID marca como obligatorios (`id`, `identifier`, `eduPersonScopedAffiliation`):
 
 ```
-# Esperado: 400 {"error":"invalid_presentation","error_description":"VC missing required fields: eduPersonPrincipalName, ..."}
+# Esperado: 400 {"error":"invalid_presentation","error_description":"VC missing required fields: identifier, eduPersonScopedAffiliation"}
 ```
+
+El log del IdP anade los campos que la credencial **si** trae, lo que permite distinguir
+una credencial incompleta de un emisor que usa otra nomenclatura:
+
+```
+OID4VP: VC missing required fields: identifier, eduPersonScopedAffiliation (present: id, body)
+```
+
+Si el despliegue exige atributos adicionales mediante `required_attributes`, el mismo
+error aparece con esos campos.
 
 ### 10.5 Issuer no confiable (con trusted_issuers configurado)
 

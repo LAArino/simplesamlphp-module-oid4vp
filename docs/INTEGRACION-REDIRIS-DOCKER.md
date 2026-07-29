@@ -29,13 +29,22 @@ repositorio e instalando el modulo dentro del contenedor `sso_backend`.
 
 ## 1. Resumen ejecutivo
 
-El modulo funciona en la imagen actual de RedIRIS: se ha completado el flujo hasta
-servir el JWT Authorization Request firmado a la wallet. Para integrarlo de forma
-soportada quedan **dos acciones del lado de RedIRIS**:
+El modulo funciona en la imagen actual de RedIRIS. Se ha completado el **flujo entero de
+autenticacion** sobre ese contenedor, con una wallet EUDI real y credenciales
+EducationalID de las dos redes:
+
+| Red | Credencial | Resultado |
+|---|---|---|
+| BLUE | `VerifiableEducationalID` | Asercion SAML emitida con todos los atributos |
+| EBSI | `EducationalId` | Asercion SAML emitida (DID y emisor resueltos en Conformance tras 404 en Pilot) |
+
+Para integrarlo de forma soportada quedan estas acciones del lado de RedIRIS, de las
+cuales **dos son bloqueantes**:
 
 | # | Accion | Responsable | Bloqueante |
 |---|---|---|---|
 | 1 | Anadir 3 librerias PHP a la imagen `backend-sso-ssp` | RedIRIS | **Si** |
+| 1b | Cadena TLS de `api.blue.rediris.es` (ver 9.1) | RedIRIS | **Si** |
 | 2 | Anadir `'template_base' => 'baseSSO.twig'` a la config del authsource | RedIRIS | No (cosmetico) |
 | 3 | Tematizar el selector de multiauth | RedIRIS | No (cosmetico) |
 | 4 | Publicar plantilla propia en el tema para la tarjeta de login | RedIRIS | No (opcional) |
@@ -89,7 +98,8 @@ Dos observaciones relevantes:
 
 ## 4. Requisito 1: dependencias PHP en la imagen
 
-**Es el unico punto bloqueante.**
+**Bloqueante.** El otro punto bloqueante es la cadena TLS de `api.blue.rediris.es`
+(seccion 9.1).
 
 El modulo necesita tres librerias que la imagen actual no incluye:
 
@@ -543,7 +553,8 @@ plantillas de las secciones 5 y 6.
 - [ ] El selector muestra la opcion de wallet
 - [ ] La pagina QR se ve integrada con el tema
 - [ ] `/request_uri/{id}` devuelve 200 con `Content-Type: application/oauth-authz-req+jwt`
-- [ ] Flujo completo con una wallet real contra BLUE (PRE o DES)
+- [ ] Flujo completo con una wallet real contra BLUE
+- [ ] Flujo completo con una wallet real contra EBSI
 - [ ] La asercion SAML incluye los atributos esperados
 - [ ] No hay ficheros en `public/data/`
 
