@@ -62,14 +62,15 @@ Designed for universities and educational institutions.
 - **W3C Verifiable Credentials** — Supports W3C-VC in JWT format (Verifiable Presentations and Verifiable Credentials)
 - **12-step verification pipeline** — VP signature, VC signature, nonce, audience, expiry, issuer trust
 - **VC → SAML attribute mapping** — Friendly names (`cn`, `mail`, `eduPersonPrincipalName`) and OID format (`urn:oid:...`)
-- **Responsive QR page** — QR code on desktop, deep-link button on mobile
+- **Responsive QR page** — QR code on desktop, deep-link button on touch devices and narrow viewports, dark-scheme aware
+- **Themeable** — the QR page layout is configurable (`template_base` / `template`), so it can reuse the host theme's login layout
 - **Multi-language** — English and Spanish UI
 - **Flexible session storage** — File-based (with flock) or SQL via SimpleSAMLphp store
 
 ### Requirements
 
 - PHP >= 8.0
-- Extensions: `ext-gmp`, `ext-openssl`
+- Extensions: `ext-openssl` (no bignum extension needed)
 - SimpleSAMLphp >= 2.0
 - HTTPS with valid certificate
 - `/direct_post` endpoint accessible from the wallet network
@@ -118,24 +119,49 @@ Or use it within a `multiauth` source:
 
 #### 3. Module configuration
 
-Copy `config/module_oid4vp.php` to your SimpleSAMLphp `config/` directory and edit:
+All options live in the authentication source entry above. `config/module_oid4vp.php`
+documents every option with its default — it is a **reference to copy from, not a file
+the module loads**:
 
 ```php
-'verifier_client_id' => 'https://idp.example.org',  // Your IdP entity ID
-'private_key_path'   => 'cert/oid4vp.pem',           // Path to EC private key
-'public_key_path'    => 'cert/oid4vp.crt',           // Path to EC public key
-'session_ttl'        => 300,                          // QR timeout in seconds
-'trusted_issuers'    => [                             // Trusted credential issuer DIDs
-    'did:key:z6Mkr...',
+'oid4vp' => [
+    'oid4vp:OID4VP',
+    'verifier_id'      => 'https://idp.example.org',  // Your IdP entity ID
+    'signing_key'      => 'oid4vp.pem',                // EC private key (certdir-relative)
+    'signing_cert'     => 'oid4vp.crt',                // EC public key
+    'session_timeout'  => 300,                         // QR timeout in seconds
+    'trusted_issuers'  => [                            // Always trusted issuer DIDs
+        'did:key:z6Mkr...',
+    ],
+    'trust_networks'   => [],                          // Override EBSI/BLUE registries
+    'template_base'    => 'base.twig',                 // Layout the QR page extends
 ],
 ```
 
-#### 4. Create session directory
+Issuers on a known network (`did:ebsi`, `did:blue`) are additionally checked against that
+network's Trusted Issuers Registry and **rejected if not registered**. Issuers whose DID
+method has no network (`did:key`, `did:jwk`) are accepted with a log warning when no
+`trusted_issuers` list is configured — development mode, not for production.
+
+#### 4. Create data directories
 
 ```bash
-mkdir -p data/oid4vp_sessions
-chown www-data:www-data data/oid4vp_sessions
+mkdir -p data/oid4vp_sessions data/oid4vp_cache
+chown www-data:www-data data/oid4vp_sessions data/oid4vp_cache
+chmod 700 data/oid4vp_sessions data/oid4vp_cache
 ```
+
+`data/` must live **outside the document root**: session files hold the verified
+credential's attributes. `data/oid4vp_cache/` stores DID documents and Trusted Issuers
+Registry lookups for 48 hours.
+
+#### 5. Theming (optional)
+
+The QR page extends `base.twig` by default, which looks like a generic SimpleSAMLphp
+page. Point `template_base` at your theme's login layout so it matches the rest of the
+login flow — for RedIRIS's IdPnube theme that is `baseSSO.twig`. Themes needing more
+wrapper markup can override `oid4vp:qrcode.twig` the standard way, by shipping
+`themes/<Theme>/oid4vp/qrcode.twig`.
 
 ### Endpoints
 
@@ -175,6 +201,13 @@ composer install --dev
 ```
 
 A simulated wallet script is available at `tests/test_wallet.php` for end-to-end manual testing. See the [setup and testing guide](docs/GUIA-HABILITACION-Y-TESTING.md) for detailed instructions.
+
+### Documentation
+
+| Document | Contents |
+|---|---|
+| [Setup and testing guide](docs/GUIA-HABILITACION-Y-TESTING.md) | Full deployment walkthrough, trust network configuration, manual and unit testing, troubleshooting (Spanish) |
+| [RedIRIS Docker integration](docs/INTEGRACION-REDIRIS-DOCKER.md) | What the RedIRIS team needs to do to ship this module in the dockerized IdP: image dependencies, theming, env vars, volumes (Spanish) |
 
 ### Roadmap
 
@@ -251,14 +284,15 @@ Diseñado para universidades e instituciones educativas.
 - **Credenciales Verificables W3C** — Soporta W3C-VC en formato JWT (Verifiable Presentations y Verifiable Credentials)
 - **Pipeline de verificación de 12 pasos** — Firma VP, firma VC, nonce, audiencia, expiración, confianza del emisor
 - **Mapeo VC → atributos SAML** — Nombres amigables (`cn`, `mail`, `eduPersonPrincipalName`) y formato OID (`urn:oid:...`)
-- **Página QR responsiva** — Código QR en escritorio, botón deep-link en móvil
+- **Página QR responsiva** — Código QR en escritorio, botón deep-link en dispositivos táctiles y pantallas estrechas, compatible con modo oscuro
+- **Tematizable** — El layout de la página QR es configurable (`template_base` / `template`), por lo que puede reutilizar el layout de login del tema anfitrión
 - **Multi-idioma** — Interfaz en inglés y español
 - **Almacenamiento de sesión flexible** — Basado en archivos (con flock) o SQL vía SimpleSAMLphp store
 
 ### Requisitos
 
 - PHP >= 8.0
-- Extensiones: `ext-gmp`, `ext-openssl`
+- Extensiones: `ext-openssl` (no requiere extensión de precisión arbitraria)
 - SimpleSAMLphp >= 2.0
 - HTTPS con certificado válido
 - Endpoint `/direct_post` accesible desde la red de la wallet
@@ -307,24 +341,49 @@ O dentro de una fuente `multiauth`:
 
 #### 3. Configuración del módulo
 
-Copiar `config/module_oid4vp.php` al directorio `config/` de SimpleSAMLphp y editar:
+Todas las opciones van en la entrada de la fuente de autenticación anterior.
+`config/module_oid4vp.php` documenta cada opción con su valor por defecto — es una
+**referencia de la que copiar, no un fichero que el módulo cargue**:
 
 ```php
-'verifier_client_id' => 'https://idp.example.org',  // Entity ID del IdP
-'private_key_path'   => 'cert/oid4vp.pem',           // Ruta a la clave privada EC
-'public_key_path'    => 'cert/oid4vp.crt',           // Ruta a la clave pública EC
-'session_ttl'        => 300,                          // Timeout del QR en segundos
-'trusted_issuers'    => [                             // DIDs de emisores confiables
-    'did:key:z6Mkr...',
+'oid4vp' => [
+    'oid4vp:OID4VP',
+    'verifier_id'      => 'https://idp.example.org',  // Entity ID del IdP
+    'signing_key'      => 'oid4vp.pem',                // Clave privada EC (relativa a certdir)
+    'signing_cert'     => 'oid4vp.crt',                // Clave pública EC
+    'session_timeout'  => 300,                         // Timeout del QR en segundos
+    'trusted_issuers'  => [                            // DIDs siempre confiables
+        'did:key:z6Mkr...',
+    ],
+    'trust_networks'   => [],                          // Sobreescribir registros EBSI/BLUE
+    'template_base'    => 'base.twig',                 // Layout que extiende la página QR
 ],
 ```
 
-#### 4. Crear directorio de sesiones
+Los emisores de una red conocida (`did:ebsi`, `did:blue`) se comprueban además contra el
+Trusted Issuers Registry de esa red y **se rechazan si no están registrados**. Los emisores
+cuyo método DID no tiene red asociada (`did:key`, `did:jwk`) se aceptan con un warning en
+el log cuando no hay lista `trusted_issuers` configurada — modo desarrollo, no para producción.
+
+#### 4. Crear directorios de datos
 
 ```bash
-mkdir -p data/oid4vp_sessions
-chown www-data:www-data data/oid4vp_sessions
+mkdir -p data/oid4vp_sessions data/oid4vp_cache
+chown www-data:www-data data/oid4vp_sessions data/oid4vp_cache
+chmod 700 data/oid4vp_sessions data/oid4vp_cache
 ```
+
+`data/` debe estar **fuera del document root**: los ficheros de sesión contienen los
+atributos de la credencial ya verificada. `data/oid4vp_cache/` guarda documentos DID y
+consultas al Trusted Issuers Registry durante 48 horas.
+
+#### 5. Tematización (opcional)
+
+La página QR extiende `base.twig` por defecto, que tiene aspecto de página genérica de
+SimpleSAMLphp. Apuntar `template_base` al layout de login del tema propio para que encaje
+con el resto del flujo — en el tema IdPnube de RedIRIS es `baseSSO.twig`. Los temas que
+necesiten más envoltorio pueden sobreescribir `oid4vp:qrcode.twig` por la vía estándar,
+publicando `themes/<Tema>/oid4vp/qrcode.twig`.
 
 ### Endpoints
 
@@ -364,6 +423,13 @@ composer install --dev
 ```
 
 Hay un script de wallet simulada en `tests/test_wallet.php` para testing manual end-to-end. Consultar la [guía de habilitación y testing](docs/GUIA-HABILITACION-Y-TESTING.md) para instrucciones detalladas.
+
+### Documentación
+
+| Documento | Contenido |
+|---|---|
+| [Guía de habilitación y testing](docs/GUIA-HABILITACION-Y-TESTING.md) | Despliegue completo, configuración de redes de confianza, testing manual y unitario, diagnóstico de problemas |
+| [Integración en el Docker de RedIRIS](docs/INTEGRACION-REDIRIS-DOCKER.md) | Qué debe hacer el equipo de RedIRIS para incluir el módulo en el IdP dockerizado: dependencias de la imagen, tematización, variables de entorno, volúmenes |
 
 ### Hoja de ruta
 

@@ -7,7 +7,7 @@
 3. [Instalar dependencias PHP](#3-instalar-dependencias-php)
 4. [Configurar SimpleSAMLphp](#4-configurar-simplesamlphp)
 5. [Verificar que el modulo esta habilitado](#5-verificar-que-el-modulo-esta-habilitado)
-6. [Crear directorio de sesiones](#6-crear-directorio-de-sesiones)
+6. [Crear directorios de datos](#6-crear-directorios-de-datos)
 7. [Test manual: flujo completo con wallet simulada](#7-test-manual-flujo-completo-con-wallet-simulada)
 8. [Tests unitarios con PHPUnit](#8-tests-unitarios-con-phpunit)
 9. [Verificar la SAML assertion resultante](#9-verificar-la-saml-assertion-resultante)
@@ -24,27 +24,30 @@
 |---|---|---|
 | PHP | 8.0+ | `php -v` |
 | ext-openssl | * | `php -m \| grep openssl` |
-| ext-gmp | * | `php -m \| grep gmp` |
 | ext-json | * | `php -m \| grep json` |
 | SimpleSAMLphp | 2.0+ | Ver `config/config.php` |
 | Composer | 2.x | `composer --version` |
 | curl | * | `curl --version` |
 | openssl CLI | * | `openssl version` |
 
-### Instalar ext-gmp si falta
+> **Nota sobre `ext-gmp`**: versiones anteriores del modulo la requerian para decodificar
+> base58 (resolucion de `did:key`). Ya no se necesita: el modulo implementa base58
+> internamente sin librerias de precision arbitraria, de modo que instala en imagenes
+> PHP que no incluyen ni `gmp` ni `bcmath`.
 
-```bash
-# Debian/Ubuntu
-sudo apt install php-gmp
-sudo systemctl restart apache2
+### Conectividad de red saliente
 
-# RHEL/CentOS
-sudo dnf install php-gmp
-sudo systemctl restart httpd
+La verificacion de credenciales de las redes EBSI y BLUE requiere acceso HTTPS saliente
+desde el IdP a los registros de cada red. Si hay cortafuegos o proxy de salida, hay que
+permitir estos destinos:
 
-# Verificar
-php -m | grep gmp
-```
+| Red | Destinos |
+|---|---|
+| EBSI | `api-pilot.ebsi.eu`, `api-pilot.ebsi.rediris.es` (espejo), `api-conformance.ebsi.eu` |
+| BLUE | `api.blue.rediris.es`, `api-pre.blue.rediris.es`, `api-des.blue.rediris.es` |
+
+Sin esta conectividad solo funcionan los emisores resueltos localmente (`did:key`, `did:jwk`)
+y los declarados en la lista estatica `trusted_issuers`.
 
 ---
 
@@ -160,16 +163,73 @@ $config = [
         // true  = formato OID (urn:oid:2.5.4.3, ...)
         'use_oid_format' => false,
 
-        // Issuers de confianza (en produccion, anadir DIDs reales)
+        // Lista estatica de issuers de confianza. Se comprueba SIEMPRE primero,
+        // antes que cualquier registro de red.
         'trusted_issuers' => [
             // 'did:ebsi:z...',
+            // 'did:blue:z...',
         ],
 
-        // null = modo desarrollo (acepta cualquier issuer con warning)
-        'ebsi_trust_registry' => null,
+        // Redes de confianza. EBSI (did:ebsi) y BLUE (did:blue) vienen incorporadas
+        // con sus registros por defecto; solo hay que rellenar esto para sobreescribir
+        // una red o anadir una nueva. Ver seccion 4.3.
+        'trust_networks' => [],
+
+        // Layout que extiende la pagina QR. Apuntarlo al layout de login del tema
+        // propio para que la pantalla QR no desentone con la de usuario/contrasena.
+        'template_base' => 'base.twig',
     ],
 ];
 ```
+
+### 4.3 Redes de confianza (EBSI y BLUE)
+
+El modulo selecciona el registro segun el metodo del DID del emisor, con cadenas de
+reintento equivalentes a las de la wallet:
+
+| Metodo DID | Red | Primario | Reserva (error de red) | Alternativas (404) |
+|---|---|---|---|---|
+| `did:ebsi` | EBSI | `api-pilot.ebsi.eu` | `api-pilot.ebsi.rediris.es` | `api-conformance.ebsi.eu` |
+| `did:blue` | BLUE | `api.blue.rediris.es` | — | `api-pre...`, `api-des...` |
+
+Cada red aporta Registro DID y Trusted Issuers Registry (TIR). Las resoluciones correctas
+se cachean 48 h en disco.
+
+**Semantica de confianza** (por orden):
+
+1. DID en `trusted_issuers` → aceptado.
+2. DID de una red conocida (`did:ebsi`, `did:blue`) → se consulta su TIR. **Si no esta
+   registrado, se rechaza.**
+3. DID sin red asociada (`did:key`, `did:jwk`, `did:web`) → si no hay `trusted_issuers`
+   ni `ebsi_trust_registry`, se acepta con un WARNING en el log (**modo desarrollo:
+   no usar en produccion**).
+
+Para apuntar a un entorno concreto, sobreescribir la entrada de esa red:
+
+```php
+'trust_networks' => [
+    'did:blue' => [
+        'name' => 'BLUE',
+        'config' => [
+            'did_registry_url' => 'https://api-pre.blue.rediris.es/did-registry/v5',
+            'trusted_issuers_registry_url' => 'https://api-pre.blue.rediris.es/trusted-issuers-registry/v5',
+            'trusted_schemas_registry_url' => 'https://api-pre.blue.rediris.es/trusted-schemas-registry/v3',
+            'label' => 'PRE',
+        ],
+        'alternate_configs' => [],   // sin cadena de reintento
+    ],
+],
+```
+
+### 4.4 Metodos DID soportados
+
+| Metodo | Resolucion |
+|---|---|
+| `did:key` | Local. Multicodec `0x1200` (P-256 comprimida) y `0xeb51` (`jwk_jcs-pub`, formato EBSI) |
+| `did:jwk` | Local (JWK embebida en el DID) |
+| `did:web` | HTTPS segun la especificacion W3C, validando que el `id` del documento coincida |
+| `did:ebsi`, `did:blue` | Registro DID de su red |
+| Otros | Universal Resolver (`dev.uniresolver.io`) — **solo desarrollo** |
 
 ### 4.2 saml20-idp-hosted.php
 
@@ -208,20 +268,38 @@ touch /var/www/html/simplesamlphp/modules/oid4vp/default-enable
 
 ---
 
-## 6. Crear directorio de sesiones
+## 6. Crear directorios de datos
 
-El SessionStore usa almacenamiento basado en ficheros. El directorio debe existir y ser escribible por Apache:
+El modulo usa dos directorios bajo el `datadir` de SimpleSAMLphp:
+
+| Directorio | Contenido |
+|---|---|
+| `data/oid4vp_sessions/` | Sesiones OID4VP: nonce, state, configuracion del verificador y, tras la verificacion, los atributos de la credencial |
+| `data/oid4vp_cache/` | Cache de documentos DID y consultas al TIR (TTL 48 h) |
 
 ```bash
-# Crear el directorio
+# Crear los directorios
 mkdir -p /var/www/html/simplesamlphp/data/oid4vp_sessions
+mkdir -p /var/www/html/simplesamlphp/data/oid4vp_cache
 
 # Permisos: solo Apache puede leer/escribir
 chown www-data:www-data /var/www/html/simplesamlphp/data/oid4vp_sessions
+chown www-data:www-data /var/www/html/simplesamlphp/data/oid4vp_cache
 chmod 700 /var/www/html/simplesamlphp/data/oid4vp_sessions
+chmod 700 /var/www/html/simplesamlphp/data/oid4vp_cache
 ```
 
-> **Nota**: Si SimpleSAMLphp tiene configurado `store.type => 'sql'` en `config/config.php`, el modulo usara automaticamente la base de datos SQL en lugar de ficheros. No se necesita crear el directorio en ese caso.
+> **Importante**: `datadir` **debe quedar fuera del document root**. Los ficheros de sesion
+> contienen los atributos de la credencial ya verificada. El modulo resuelve la ruta con
+> `Configuration::getPathValue()`, que la interpreta respecto al directorio base de
+> SimpleSAMLphp; si `datadir` apunta dentro de `public/`, esos ficheros quedarian servidos
+> por HTTP. Comprobacion rapida tras un flujo de prueba:
+>
+> ```bash
+> ls /var/www/html/simplesamlphp/public/data 2>/dev/null && echo "PROBLEMA: datadir dentro del docroot"
+> ```
+
+> **Nota**: Si SimpleSAMLphp tiene configurado `store.type => 'sql'` en `config/config.php`, el modulo usara automaticamente la base de datos SQL para las sesiones en lugar de ficheros. La cache sigue siendo en disco.
 
 ---
 
@@ -697,15 +775,49 @@ Mensajes clave:
 
 **"Signing key not found"**
 ```
-Causa: La clave ES256 no esta en la ruta configurada.
-Fix:   Verificar que cert/oid4vp.pem existe y es legible por Apache.
+Causa: La clave ES256 no esta en la ruta configurada, o certdir apunta a otro sitio.
+Fix:   Verificar que cert/oid4vp.pem existe y es legible por el usuario del servidor web.
        ls -la /var/www/html/simplesamlphp/cert/oid4vp.pem
+       El modulo busca primero la ruta tal cual y luego relativa a 'certdir'
+       (resuelto respecto al directorio base de SSP, no al working directory).
 ```
 
 **"Cannot create session directory"**
 ```
 Causa: El directorio data/oid4vp_sessions/ no existe o no tiene permisos.
 Fix:   mkdir -p data/oid4vp_sessions && chown www-data:www-data data/oid4vp_sessions
+```
+
+**Los ficheros de sesion aparecen en public/data/**
+```
+Causa: datadir apunta dentro del document root (ver seccion 6).
+Fix:   Configurar 'datadir' en config/config.php a una ruta fuera de public/.
+       Es un problema de seguridad: esos ficheros contienen los atributos
+       de la credencial verificada.
+```
+
+**"[BLUE] DID not found in any registry" / "[EBSI] DID not found..."**
+```
+Causa: El DID del emisor o del holder no esta publicado en el registro de esa red,
+       o el IdP no tiene salida HTTPS hacia los registros.
+Fix:   - Comprobar conectividad: curl -sI https://api.blue.rediris.es/did-registry/v5
+       - Confirmar el entorno correcto (PROD/PRE/DES) con 'trust_networks'
+       - Revisar el log: las lineas INFO indican que reintentos se hicieron
+```
+
+**"VC issuer is not registered in the BLUE/EBSI Trusted Issuers Registry"**
+```
+Causa: El emisor resuelve correctamente pero no esta acreditado en el TIR de su red.
+Fix:   - Verificar la acreditacion del emisor en el TIR correspondiente
+       - En pruebas, anadir su DID a 'trusted_issuers' (se comprueba antes que el TIR)
+```
+
+**"VP JWT header missing kid" o fallo al resolver la clave del holder**
+```
+Causa: Habitualmente un did:key en formato EBSI (jwk_jcs-pub, multicodec 0xeb51),
+       que versiones antiguas del modulo no sabian decodificar.
+Fix:   Ya soportado. Si persiste, comprobar que el JWT usa ES256 y que el kid
+       es un DID de un metodo soportado (ver seccion 4.4).
 ```
 
 **"Failed to load ES256 private key"**
@@ -717,9 +829,32 @@ Fix:   openssl ec -in cert/oid4vp.pem -text -noout
 
 **El QR no se genera (pagina en blanco o error JS)**
 ```
-Causa: CDN de qrcode.js no accesible, o error en la configuracion Twig.
+Causa: qrcode.min.js no cargado, o error en la configuracion Twig.
 Fix:   Abrir consola del navegador (F12) y buscar errores JS.
-       Verificar que la URL del CDN es accesible.
+       El script se sirve desde el propio modulo:
+       /simplesaml/module.php/oid4vp/assets/qrcode.min.js
+```
+
+**Sale el boton "Abrir EUDI Wallet" en vez del QR en un escritorio**
+```
+Causa: Es intencionado si el viewport es < 480px o el dispositivo es tactil:
+       no se puede escanear la pantalla que se esta sosteniendo.
+Fix:   Ninguno. Ensanchar la ventana devuelve el QR.
+```
+
+**Los cambios en CSS/JS del modulo no se ven en el navegador**
+```
+Causa: SimpleSAMLphp cachea los assets con un parametro ?tag= que no cambia
+       al sustituir los ficheros.
+Fix:   Recarga forzada en el navegador (Cmd/Ctrl + Shift + R).
+```
+
+**La pagina QR desentona con la pantalla de login del tema**
+```
+Causa: Por defecto extiende 'base.twig' (layout generico de SimpleSAMLphp).
+Fix:   Configurar 'template_base' apuntando al layout de login del tema.
+       Para casos que necesiten mas envoltorio (tarjetas, rejillas), el tema
+       puede sobreescribir la plantilla en themes/<Tema>/oid4vp/qrcode.twig.
 ```
 
 **Polling nunca detecta "completed"**
