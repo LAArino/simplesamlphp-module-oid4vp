@@ -14,7 +14,9 @@
         statusUrl: appEl.getAttribute('data-status-url'),
         qrpageUrl: appEl.getAttribute('data-qrpage-url'),
         authState: appEl.getAttribute('data-auth-state'),
-        timeout:   parseInt(appEl.getAttribute('data-timeout'), 10) || 300
+        timeout:   parseInt(appEl.getAttribute('data-timeout'), 10) || 300,
+        deepLinkHeading: appEl.getAttribute('data-deeplink-heading'),
+        deepLinkInstructions: appEl.getAttribute('data-deeplink-instructions')
     };
 
     if (!config.openidUri || !config.statusUrl) {
@@ -27,10 +29,18 @@
     var startTime = Date.now();
     var timeoutMs = config.timeout * 1000;
 
-    // Detect mobile user-agent
-    var isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+    // A QR code is useless on the device that displays it, so offer the deep
+    // link instead whenever the wallet is likely to be on this same device:
+    // a touch-primary device, or a viewport too narrow for a scannable code.
+    // The user-agent is only one of the signals — desktop browsers at phone
+    // widths need the same treatment.
+    var coarsePointer = window.matchMedia
+        && window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+    var narrowViewport = window.innerWidth < 480;
+    var mobileUserAgent = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+    var useDeepLink = coarsePointer || narrowViewport || mobileUserAgent;
 
-    if (isMobile) {
+    if (useDeepLink) {
         // On mobile: show deep link button instead of QR
         var mobileDiv = document.getElementById('oid4vp-mobile-link');
         var deeplinkBtn = document.getElementById('oid4vp-deeplink-btn');
@@ -40,16 +50,33 @@
             deeplinkBtn.href = config.openidUri;
             mobileDiv.classList.remove('oid4vp-hidden');
         }
-        // Hide QR code container on mobile (can't scan own screen)
+        // Drop the QR code — you cannot scan the screen you are holding. The
+        // wrapper stays for the status line, but loses its card styling so it
+        // does not read as an empty box.
         if (qrWrapper) {
             qrWrapper.querySelector('#oid4vp-qr-code').classList.add('oid4vp-hidden');
+            qrWrapper.classList.add('oid4vp-qr-hidden');
+        }
+
+        // Wording must follow: telling the user to scan a code that is not
+        // there is worse than no instructions at all
+        var heading = document.getElementById('oid4vp-heading');
+        var instructions = document.getElementById('oid4vp-instructions');
+        if (heading && config.deepLinkHeading) {
+            heading.textContent = config.deepLinkHeading;
+        }
+        if (instructions && config.deepLinkInstructions) {
+            instructions.textContent = config.deepLinkInstructions;
         }
     } else {
         // On desktop: generate QR code
         var qrContainer = document.getElementById('oid4vp-qr-code');
         if (typeof QRCode !== 'undefined' && qrContainer) {
+            // Fit the code to the available width; CSS scales the canvas down
+            // further if the container is narrower than this.
+            var qrSize = Math.max(200, Math.min(280, window.innerWidth - 120));
             QRCode.toCanvas(document.createElement('canvas'), config.openidUri, {
-                width: 280,
+                width: qrSize,
                 margin: 2,
                 color: { dark: '#000000', light: '#ffffff' }
             }, function (error, canvas) {

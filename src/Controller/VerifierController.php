@@ -104,13 +104,15 @@ class VerifierController
         $statusUrl = Module::getModuleURL('oid4vp/status/' . $sessionData['session_id']);
 
         // Render the QR code page
-        $t = new Template($this->config, 'oid4vp:qrcode.twig');
+        $t = new Template($this->config, $state['oid4vp:template'] ?? 'oid4vp:qrcode.twig');
         $t->data['openidUri'] = $openidUri;
         $t->data['sessionId'] = $sessionData['session_id'];
         $t->data['statusUrl'] = $statusUrl;
         $t->data['qrpageUrl'] = $qrpageUrl;
         $t->data['authState'] = $newStateId;
         $t->data['timeout'] = $timeout;
+        $t->data['templateBase'] = $state['oid4vp:template_base'] ?? 'base.twig';
+        $t->data['backUrl'] = $this->buildBackUrl($state, $newStateId);
 
         return $t;
     }
@@ -335,6 +337,24 @@ class VerifierController
 
         // Complete SimpleSAMLphp authentication (never returns)
         Auth\Source::completeAuth($state);
+    }
+
+    /**
+     * Build the "back to login options" URL shown on the QR page.
+     *
+     * Only meaningful when this auth source was reached through multiauth:
+     * the link returns the user to the source selector, carrying the saved
+     * state ID. Returns null when there is nothing to go back to, and the
+     * template then hides the link.
+     */
+    private function buildBackUrl(array $state, string $stateId): ?string
+    {
+        $multiAuthId = $state['\SimpleSAML\Module\multiauth\Auth\Source\MultiAuth.AuthId'] ?? null;
+        if ($multiAuthId === null) {
+            return null;
+        }
+
+        return Module::getModuleURL('multiauth/discovery', ['AuthState' => $stateId]);
     }
 
     /**

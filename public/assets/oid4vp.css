@@ -1,3 +1,11 @@
+/* This page renders inside the deployment's own theme, whose background we
+   cannot know. Body text therefore inherits the theme's colour instead of
+   hardcoding one (a fixed dark grey disappears on a dark theme, and a fixed
+   light grey disappears on a light one); shades are derived with opacity so
+   they follow along. Only self-contained surfaces — the QR card and the
+   status/error/success boxes — carry their own colours, and those stay light
+   because the QR code needs a white quiet zone to be scannable. */
+
 /* Initially hidden elements — JS shows them as needed */
 .oid4vp-hidden {
     display: none !important;
@@ -12,18 +20,20 @@
 
 .oid4vp-container h2 {
     margin-bottom: 0.5rem;
-    color: #333;
+    color: inherit;
     font-size: 1.4rem;
 }
 
 .oid4vp-instructions {
-    color: #666;
+    color: inherit;
+    opacity: 0.75;
     margin-bottom: 1.5rem;
     font-size: 0.95rem;
 }
 
 #oid4vp-qr-wrapper {
     display: inline-block;
+    max-width: 100%;
     padding: 1.5rem;
     background: #fff;
     border: 2px solid #e0e0e0;
@@ -36,8 +46,18 @@
     opacity: 0.3;
 }
 
+/* Deep-link mode: no QR to frame, so drop the card chrome */
+#oid4vp-qr-wrapper.oid4vp-qr-hidden {
+    display: block;
+    padding: 0;
+    background: none;
+    border: none;
+}
+
 #oid4vp-qr-code canvas {
     display: block;
+    max-width: 100%;
+    height: auto;
 }
 
 /* Status indicator */
@@ -52,6 +72,7 @@
     font-size: 0.9rem;
 }
 
+/* The status line sits on the white QR card, so it keeps light-scheme colours */
 .oid4vp-status-pending {
     color: #666;
 }
@@ -89,7 +110,7 @@
     color: #2e7d32;
 }
 
-/* Error message */
+/* Error message — self-contained box, readable over any theme background */
 .oid4vp-error {
     background: #ffebee;
     color: #c62828;
@@ -112,7 +133,8 @@
 /* Timer */
 .oid4vp-timer {
     margin: 0.75rem 0;
-    color: #999;
+    color: inherit;
+    opacity: 0.6;
     font-size: 0.85rem;
     font-variant-numeric: tabular-nums;
 }
@@ -122,8 +144,8 @@
     margin-top: 1.5rem;
 }
 
+/* No colour: inherits the theme's link colour */
 .oid4vp-back-link {
-    color: #1565c0;
     text-decoration: none;
     font-size: 0.9rem;
 }
@@ -137,6 +159,8 @@
     margin: 1.5rem 0;
 }
 
+/* Solid button with white text — legible on light and dark backgrounds alike.
+   Themes can restyle it by overriding this class. */
 .oid4vp-deeplink-button {
     display: inline-block;
     padding: 0.9rem 2rem;
@@ -156,7 +180,20 @@
 }
 
 .oid4vp-mobile-hint {
-    color: #888;
+    color: inherit;
+    opacity: 0.65;
     font-size: 0.85rem;
     margin-top: 0.75rem;
+}
+
+/* Narrow viewports: trim the padding that would otherwise squeeze the code */
+@media (max-width: 480px) {
+    .oid4vp-container {
+        padding: 0.75rem;
+        margin: 1rem auto;
+    }
+
+    #oid4vp-qr-wrapper {
+        padding: 0.75rem;
+    }
 }

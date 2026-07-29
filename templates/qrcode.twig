@@ -1,5 +1,7 @@
+{# The layout to extend is configurable ('template_base' auth source option) so
+   deployments can reuse their theme's login layout instead of the generic one. #}
 {% set pagetitle = 'Scan the QR code with your wallet' | trans %}
-{% extends "base.twig" %}
+{% extends templateBase | default('base.twig') %}
 
 {% block preload %}
     <link rel="stylesheet" href="{{ asset('oid4vp.css', 'oid4vp') }}">
@@ -13,10 +15,14 @@
      data-status-url="{{ statusUrl | e('html_attr') }}"
      data-qrpage-url="{{ qrpageUrl | e('html_attr') }}"
      data-auth-state="{{ authState | e('html_attr') }}"
-     data-timeout="{{ timeout }}">
+     data-timeout="{{ timeout }}"
+     {# Headings for deep-link mode, where there is no QR code to scan.
+        Passed as attributes so the JS stays free of untranslated strings. #}
+     data-deeplink-heading="{{ 'Present your credential from this device' | trans | e('html_attr') }}"
+     data-deeplink-instructions="{{ 'Open your EUDI Wallet to present your EducationalID credential.' | trans | e('html_attr') }}">
 
-    <h2>{{ 'Scan the QR code with your wallet' | trans }}</h2>
-    <p class="oid4vp-instructions">
+    <h2 id="oid4vp-heading">{{ 'Scan the QR code with your wallet' | trans }}</h2>
+    <p class="oid4vp-instructions" id="oid4vp-instructions">
         {{ 'Open your EUDI Wallet app and scan the QR code below to present your EducationalID credential.' | trans }}
     </p>
 
@@ -49,11 +55,13 @@
         <span id="oid4vp-timer-text"></span>
     </div>
 
+    {% if backUrl %}
     <div class="oid4vp-actions">
-        <a href="{{ backUrl | default('#') }}" class="oid4vp-back-link">
+        <a href="{{ backUrl }}" class="oid4vp-back-link">
             {{ 'Back to login options' | trans }}
         </a>
     </div>
+    {% endif %}
 </div>
 
 <script src="{{ asset('qrcode.min.js', 'oid4vp') }}"></script>

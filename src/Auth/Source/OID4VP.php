@@ -52,6 +52,8 @@ class OID4VP extends Auth\Source
     private array $trustNetworks;
     private bool $useOidFormat;
     private array $attributeMap;
+    private string $template;
+    private string $templateBase;
 
     public function __construct(array $info, array $config)
     {
@@ -70,6 +72,13 @@ class OID4VP extends Auth\Source
         $this->trustNetworks = $config['trust_networks'] ?? [];
         $this->useOidFormat = $config['use_oid_format'] ?? false;
         $this->attributeMap = $config['attribute_map'] ?? [];
+
+        // Theming: 'template' swaps the whole QR page template, 'template_base'
+        // only swaps the layout our default template extends. Themes that ship
+        // their own full-screen login layout (e.g. themeRedIRIS's baseSSO.twig)
+        // usually only need 'template_base'.
+        $this->template = $config['template'] ?? 'oid4vp:qrcode.twig';
+        $this->templateBase = $config['template_base'] ?? 'base.twig';
     }
 
     /**
@@ -92,6 +101,8 @@ class OID4VP extends Auth\Source
         $state['oid4vp:use_oid_format'] = $this->useOidFormat;
         $state['oid4vp:attribute_map'] = $this->attributeMap;
         $state['oid4vp:presentation_definition_type'] = $this->presentationDefinitionType;
+        $state['oid4vp:template'] = $this->template;
+        $state['oid4vp:template_base'] = $this->templateBase;
 
         // Save state and redirect to the QR page
         $stateId = Auth\State::saveState($state, 'oid4vp:auth');

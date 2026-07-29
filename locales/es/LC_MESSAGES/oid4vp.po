@@ -30,3 +30,9 @@ msgstr "Abrir EUDI Wallet"
 
 msgid "Tap the button to open your wallet and present your EducationalID."
 msgstr "Pulsa el botón para abrir tu wallet y presentar tu EducationalID."
+
+msgid "Present your credential from this device"
+msgstr "Presenta tu credencial desde este dispositivo"
+
+msgid "Open your EUDI Wallet to present your EducationalID credential."
+msgstr "Abre tu EUDI Wallet para presentar tu credencial EducationalID."
