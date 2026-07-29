@@ -19,6 +19,8 @@ composer.lock
 test_e2e.php
 test_wallet_sim.php
 
-# Claude Code
+# AI assistant local files
 .claude/
 CLAUDE.md
+CLAUDE.local.md
+.mcp.json
