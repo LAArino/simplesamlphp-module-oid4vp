@@ -50,6 +50,7 @@ class OID4VP extends Auth\Source
     private array $trustedIssuers;
     private ?string $ebsiTrustRegistry;
     private array $trustNetworks;
+    private ?array $requiredAttributes;
     private bool $useOidFormat;
     private array $attributeMap;
     private string $template;
@@ -70,6 +71,8 @@ class OID4VP extends Auth\Source
         $this->trustedIssuers = $config['trusted_issuers'] ?? [];
         $this->ebsiTrustRegistry = $config['ebsi_trust_registry'] ?? null;
         $this->trustNetworks = $config['trust_networks'] ?? [];
+        // null keeps the EducationalID schema's own required set
+        $this->requiredAttributes = $config['required_attributes'] ?? null;
         $this->useOidFormat = $config['use_oid_format'] ?? false;
         $this->attributeMap = $config['attribute_map'] ?? [];
 
@@ -98,6 +101,7 @@ class OID4VP extends Auth\Source
         $state['oid4vp:trusted_issuers'] = $this->trustedIssuers;
         $state['oid4vp:ebsi_trust_registry'] = $this->ebsiTrustRegistry;
         $state['oid4vp:trust_networks'] = $this->trustNetworks;
+        $state['oid4vp:required_attributes'] = $this->requiredAttributes;
         $state['oid4vp:use_oid_format'] = $this->useOidFormat;
         $state['oid4vp:attribute_map'] = $this->attributeMap;
         $state['oid4vp:presentation_definition_type'] = $this->presentationDefinitionType;

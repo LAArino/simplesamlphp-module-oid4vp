@@ -126,21 +126,68 @@ class CredentialMapperTest extends TestCase
         $mapper = new CredentialMapper();
         $missing = $mapper->validateRequired(['mail' => 'test@example.org']);
 
-        $this->assertContains('eduPersonPrincipalName', $missing);
-        $this->assertContains('schacHomeOrganization', $missing);
-        $this->assertContains('displayName', $missing);
+        $this->assertContains('id', $missing);
+        $this->assertContains('identifier', $missing);
+        $this->assertContains('eduPersonScopedAffiliation', $missing);
     }
 
     public function testValidateRequiredEmptyValues(): void
     {
         $mapper = new CredentialMapper();
         $missing = $mapper->validateRequired([
-            'eduPersonPrincipalName' => '',
-            'schacHomeOrganization' => 'example.org',
-            'displayName' => 'Test',
+            'id' => '',
+            'identifier' => 'jdoe',
+            'eduPersonScopedAffiliation' => 'student@example.org',
         ]);
 
-        $this->assertContains('eduPersonPrincipalName', $missing);
-        $this->assertCount(1, $missing);
+        $this->assertSame(['id'], $missing);
+    }
+
+    /**
+     * The default required set must match the EducationalID schema, which marks
+     * everything except id, identifier and eduPersonScopedAffiliation as optional.
+     * Being stricter rejects credentials that are perfectly valid — this was hit
+     * with a real wallet against the BLUE network.
+     */
+    public function testValidateRequiredAcceptsSchemaMinimalCredential(): void
+    {
+        $mapper = new CredentialMapper();
+
+        $missing = $mapper->validateRequired([
+            'id' => 'did:key:z123',
+            'identifier' => 'jdoe',
+            'eduPersonScopedAffiliation' => ['student@example.org'],
+        ]);
+
+        $this->assertEmpty($missing);
+    }
+
+    public function testValidateRequiredTreatsEmptyArrayAsMissing(): void
+    {
+        $mapper = new CredentialMapper();
+
+        $missing = $mapper->validateRequired([
+            'id' => 'did:key:z123',
+            'identifier' => 'jdoe',
+            'eduPersonScopedAffiliation' => [],
+        ]);
+
+        $this->assertSame(['eduPersonScopedAffiliation'], $missing);
+    }
+
+    public function testValidateRequiredHonoursConfiguredList(): void
+    {
+        $mapper = new CredentialMapper(false, [], ['mail', 'displayName']);
+
+        $this->assertSame(
+            ['displayName'],
+            $mapper->validateRequired(['mail' => 'test@example.org'])
+        );
+
+        // The schema defaults no longer apply when a list is configured
+        $this->assertEmpty($mapper->validateRequired([
+            'mail' => 'test@example.org',
+            'displayName' => 'Test',
+        ]));
     }
 }

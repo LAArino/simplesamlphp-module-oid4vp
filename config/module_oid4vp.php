@@ -94,6 +94,12 @@ return [
         // 'familyName' => 'sn',
     ],
 
+    // credentialSubject fields a presentation must carry. Defaults to the ones the
+    // EducationalID schema itself marks as required (id, identifier,
+    // eduPersonScopedAffiliation) — demanding more rejects credentials that are
+    // perfectly valid. Set this only if your service providers need extra attributes.
+    'required_attributes' => ['id', 'identifier', 'eduPersonScopedAffiliation'],
+
     // Theming of the QR page.
     //
     // 'template_base' — the layout the default template extends. Point it at

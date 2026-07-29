@@ -175,6 +175,11 @@ $config = [
         // una red o anadir una nueva. Ver seccion 4.3.
         'trust_networks' => [],
 
+        // Campos que debe traer la credencial. Por defecto, los que el esquema
+        // EducationalID marca como obligatorios (id, identifier,
+        // eduPersonScopedAffiliation). Exigir mas rechaza credenciales validas.
+        // 'required_attributes' => ['id', 'identifier', 'eduPersonScopedAffiliation'],
+
         // Layout que extiende la pagina QR. Apuntarlo al layout de login del tema
         // propio para que la pantalla QR no desentone con la de usuario/contrasena.
         'template_base' => 'base.twig',
@@ -796,6 +801,18 @@ Fix:   Configurar 'datadir' en config/config.php a una ruta fuera de public/.
        de la credencial verificada.
 ```
 
+**"cURL error 60: SSL certificate problem: unable to get local issuer certificate"**
+```
+Causa: api.blue.rediris.es envia solo su certificado hoja, sin el intermedio
+       GEANT TLS RSA 1 que lo firma. Los navegadores lo descargan por AIA;
+       curl no lo hace, asi que PHP no puede construir la cadena.
+Fix:   Instalar el intermedio en el almacen de CAs del sistema:
+       curl -sO http://crt.harica.gr/HARICA-GEANT-TLS-R1.cer
+       openssl x509 -inform DER -in HARICA-GEANT-TLS-R1.cer \
+         -out /usr/local/share/ca-certificates/harica-geant-tls-r1.crt
+       update-ca-certificates
+```
+
 **"[BLUE] DID not found in any registry" / "[EBSI] DID not found..."**
 ```
 Causa: El DID del emisor o del holder no esta publicado en el registro de esa red,
@@ -803,6 +820,18 @@ Causa: El DID del emisor o del holder no esta publicado en el registro de esa re
 Fix:   - Comprobar conectividad: curl -sI https://api.blue.rediris.es/did-registry/v5
        - Confirmar el entorno correcto (PROD/PRE/DES) con 'trust_networks'
        - Revisar el log: las lineas INFO indican que reintentos se hicieron
+```
+
+**"VC missing required fields: ..."**
+```
+Causa: La credencial no trae alguno de los campos exigidos. Por defecto se exigen
+       solo los que el esquema EducationalID marca como obligatorios:
+       id, identifier, eduPersonScopedAffiliation.
+Fix:   El log incluye ademas los campos que SI trae la credencial ("present: ..."),
+       lo que permite ver si el emisor usa otra nomenclatura.
+       Si el despliegue necesita exigir mas atributos, declararlos en la opcion
+       'required_attributes' del authsource. Exigir mas que el esquema hace que
+       se rechacen credenciales validas.
 ```
 
 **"VC issuer is not registered in the BLUE/EBSI Trusted Issuers Registry"**

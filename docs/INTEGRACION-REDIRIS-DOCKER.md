@@ -431,6 +431,58 @@ confianza. Con cortafuegos o proxy de salida hay que permitir:
 | BLUE | `api.blue.rediris.es`, `api-pre.blue.rediris.es`, `api-des.blue.rediris.es` |
 | EBSI | `api-pilot.ebsi.eu`, `api-pilot.ebsi.rediris.es`, `api-conformance.ebsi.eu` |
 
+### 9.1 Cadena de certificados de `api.blue.rediris.es`
+
+**Detectado en una prueba real con wallet: la verificacion falla si no se corrige.**
+
+`api.blue.rediris.es` presenta **unicamente su certificado hoja**, sin el intermedio que
+lo firma:
+
+```
+subject = CN=*.blue.rediris.es  (RedIRIS)
+issuer  = CN=GEANT TLS RSA 1    (Hellenic Academic and Research Institutions CA)
+```
+
+El intermedio `GEANT TLS RSA 1` no se envia en el handshake. Los navegadores y los sistemas
+moviles lo toleran porque lo descargan por AIA
+(`http://crt.harica.gr/HARICA-GEANT-TLS-R1.cer`), pero **curl no hace esa descarga**, asi
+que PHP dentro del contenedor no puede construir la cadena y la verificacion de la
+credencial aborta con:
+
+```
+cURL error 60: SSL certificate problem: unable to get local issuer certificate
+```
+
+La raiz (`HARICA TLS RSA Root CA 2021`) si esta en el almacen del contenedor; lo que falta
+es exclusivamente el intermedio.
+
+**Solucion recomendada (lado servidor, resuelve el problema para todos los clientes):**
+configurar `api.blue.rediris.es` para que envie la cadena completa (hoja + intermedio).
+Es la correccion adecuada y evita que cada consumidor tenga que parchear su almacen.
+
+**Solucion en la imagen (mientras tanto):**
+
+```dockerfile
+ADD http://crt.harica.gr/HARICA-GEANT-TLS-R1.cer /tmp/harica-geant.cer
+RUN openssl x509 -inform DER -in /tmp/harica-geant.cer \
+      -out /usr/local/share/ca-certificates/harica-geant-tls-r1.crt \
+ && update-ca-certificates \
+ && rm /tmp/harica-geant.cer
+```
+
+Comprobacion:
+
+```bash
+docker exec sso_backend php -r '
+  $c = curl_init("https://api.blue.rediris.es/did-registry/v5/identifiers/did%3Ablue%3Az123");
+  curl_setopt($c, CURLOPT_RETURNTRANSFER, true); curl_exec($c);
+  echo curl_error($c) ?: "TLS OK\n";'
+```
+
+`api-pilot.ebsi.eu` no presenta este problema.
+
+### 9.2 Acceso desde la wallet
+
 Ademas, el endpoint `/direct_post` **debe ser accesible desde la red de la wallet** (red
 movil del usuario, normalmente Internet publico) y servirse por **HTTPS con certificado
 valido**: las wallets EUDI rechazan certificados no confiables. Esto encaja con el

@@ -61,15 +61,22 @@ class CredentialMapper
 
     private bool $useOidFormat;
     private array $customMap;
+    private array $requiredAttributes;
 
     /**
      * @param bool $useOidFormat Use OID format (true) or friendly names (false)
      * @param array $customMap Optional custom mapping overrides (vcField => samlAttr)
+     * @param array|null $requiredAttributes credentialSubject fields a presentation
+     *        must carry; null uses the schema's own required set
      */
-    public function __construct(bool $useOidFormat = false, array $customMap = [])
-    {
+    public function __construct(
+        bool $useOidFormat = false,
+        array $customMap = [],
+        ?array $requiredAttributes = null
+    ) {
         $this->useOidFormat = $useOidFormat;
         $this->customMap = $customMap;
+        $this->requiredAttributes = $requiredAttributes ?? self::SCHEMA_REQUIRED;
     }
 
     /**
@@ -116,21 +123,34 @@ class CredentialMapper
     }
 
     /**
-     * Validate that a credentialSubject contains the minimum required fields.
+     * Fields the EducationalID schema itself marks as required. Identical in the
+     * EBSI and BLUE schema registries.
+     *
+     * @see https://api-pilot.ebsi.eu/trusted-schemas-registry/v3/schemas/zEmFZquJtANNz7XNE46thRi1E2cAfpQiXVLSBdDgLyfGP
+     * @see https://api.blue.rediris.es/trusted-schemas-registry/v3/schemas/zvWtRJVNsU8x6G5rFJ4o5SGMdrGcFfQ1MpBpw8Wazj4t
+     */
+    public const SCHEMA_REQUIRED = [
+        'id',
+        'identifier',
+        'eduPersonScopedAffiliation',
+    ];
+
+    /**
+     * Validate that a credentialSubject contains the required fields.
+     *
+     * Defaults to what the EducationalID schema requires. Demanding more than the
+     * schema does rejects credentials that are perfectly valid — deployments whose
+     * service providers need extra attributes should opt in via the
+     * 'required_attributes' configuration option instead.
      *
      * @return array List of missing required fields (empty if valid)
      */
     public function validateRequired(array $credentialSubject): array
     {
-        $required = [
-            'eduPersonPrincipalName',
-            'schacHomeOrganization',
-            'displayName',
-        ];
-
         $missing = [];
-        foreach ($required as $field) {
-            if (!isset($credentialSubject[$field]) || $credentialSubject[$field] === '') {
+        foreach ($this->requiredAttributes as $field) {
+            $value = $credentialSubject[$field] ?? null;
+            if ($value === null || $value === '' || $value === []) {
                 $missing[] = $field;
             }
         }

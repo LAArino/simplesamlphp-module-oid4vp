@@ -88,6 +88,7 @@ class VerifierController
             'trusted_issuers' => $state['oid4vp:trusted_issuers'] ?? [],
             'ebsi_trust_registry' => $state['oid4vp:ebsi_trust_registry'] ?? null,
             'trust_networks' => $state['oid4vp:trust_networks'] ?? [],
+            'required_attributes' => $state['oid4vp:required_attributes'] ?? null,
         ];
         $sessionData = $store->create($authStateId, $verifierConfig);
 
@@ -95,9 +96,11 @@ class VerifierController
         $state['oid4vp:session_id'] = $sessionData['session_id'];
         $newStateId = Auth\State::saveState($state, 'oid4vp:auth');
 
-        // Build the openid:// URI pointing to our JAR endpoint
+        // Build the openid:// URI pointing to our JAR endpoint. client_id is
+        // repeated here because some wallets read it before fetching the JAR.
         $requestUri = Module::getModuleURL('oid4vp/request_uri/' . $sessionData['session_id']);
-        $openidUri = 'openid://?request_uri=' . urlencode($requestUri);
+        $openidUri = 'openid://?client_id=' . urlencode($verifierConfig['verifier_id'])
+            . '&request_uri=' . urlencode($requestUri);
 
         // URLs for browser JS
         $qrpageUrl = Module::getModuleURL('oid4vp/qrpage');
@@ -148,6 +151,10 @@ class VerifierController
 
         $claims = [
             'iss' => $verifierId,
+            // Required by OID4VP, and the value wallets echo back as the VP's
+            // 'aud' — PresentationVerifier checks it against the verifier id,
+            // so omitting it makes every presentation fail the audience check.
+            'client_id' => $verifierId,
             'aud' => 'https://self-issued.me/v2',
             'response_type' => 'vp_token',
             'response_mode' => 'direct_post',
@@ -255,10 +262,15 @@ class VerifierController
         }
 
         // Validate required fields
-        $mapper = new CredentialMapper();
+        $mapper = new CredentialMapper(false, [], $vc['required_attributes'] ?? null);
         $missing = $mapper->validateRequired($result['credential_subject']);
         if (!empty($missing)) {
-            Logger::warning('OID4VP: VC missing required fields: ' . implode(', ', $missing));
+            // Log the field names the credential does carry — without them this
+            // error gives no clue whether the issuer used different naming
+            Logger::warning(
+                'OID4VP: VC missing required fields: ' . implode(', ', $missing)
+                . ' (present: ' . implode(', ', array_keys($result['credential_subject'])) . ')'
+            );
             return new JsonResponse([
                 'error' => 'invalid_presentation',
                 'error_description' => 'VC missing required fields: ' . implode(', ', $missing),
@@ -354,7 +366,15 @@ class VerifierController
             return null;
         }
 
-        return Module::getModuleURL('multiauth/discovery', ['AuthState' => $stateId]);
+        // The selector loads the state under MultiAuth's own stage, so the id we
+        // saved for the QR page ('oid4vp:auth') is rejected with "Wrong stage in
+        // state". Save a second copy under the stage the selector expects.
+        $backStateId = Auth\State::saveState(
+            $state,
+            '\SimpleSAML\Module\multiauth\Auth\Source\MultiAuth.StageId'
+        );
+
+        return Module::getModuleURL('multiauth/discovery', ['AuthState' => $backStateId]);
     }
 
     /**
