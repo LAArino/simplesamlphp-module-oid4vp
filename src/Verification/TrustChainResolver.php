@@ -465,7 +465,9 @@ class TrustChainResolver
     {
         try {
             if ($explicitDir === null) {
-                $baseDir = \SimpleSAML\Configuration::getInstance()->getOptionalString(
+                // getPathValue() resolves against the SSP base directory; see
+                // the note in SessionStore — 'datadir' is relative by default.
+                $baseDir = \SimpleSAML\Configuration::getInstance()->getPathValue(
                     'datadir',
                     dirname(__DIR__, 2) . '/data'
                 );

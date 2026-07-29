@@ -59,8 +59,12 @@ class SessionStore
             // Fall through to file-based
         }
 
-        // File-based storage in the module's data directory
-        $baseDir = \SimpleSAML\Configuration::getInstance()->getOptionalString(
+        // File-based storage in the SimpleSAMLphp data directory.
+        // getPathValue() (not getOptionalString) resolves the configured path
+        // against the SSP base directory — 'datadir' is relative by default
+        // and the web server's working directory is public/, which would put
+        // session files inside the document root.
+        $baseDir = \SimpleSAML\Configuration::getInstance()->getPathValue(
             'datadir',
             dirname(__DIR__, 3) . '/data'
         );
