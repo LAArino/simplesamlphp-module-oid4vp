@@ -109,19 +109,71 @@ class JwtHandlerTest extends TestCase
         $handler->extractPublicKeyFromDid($did);
     }
 
+    /** Byte-wise base58 encode — the inverse of JwtHandler's decoder, no ext-gmp. */
     private function base58Encode(string $data): string
     {
         $alphabet = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-        $num = gmp_init(bin2hex($data), 16);
-        $encoded = '';
-        while (gmp_cmp($num, 0) > 0) {
-            [$num, $rem] = [gmp_div_q($num, 58), gmp_intval(gmp_mod($num, 58))];
-            $encoded = $alphabet[$rem] . $encoded;
+
+        $digits = [];
+        foreach (unpack('C*', $data) as $byte) {
+            $carry = $byte;
+            for ($i = count($digits) - 1; $i >= 0; $i--) {
+                $carry += $digits[$i] << 8;
+                $digits[$i] = $carry % 58;
+                $carry = intdiv($carry, 58);
+            }
+            while ($carry > 0) {
+                array_unshift($digits, $carry % 58);
+                $carry = intdiv($carry, 58);
+            }
         }
+
+        $encoded = '';
+        foreach ($digits as $digit) {
+            $encoded .= $alphabet[$digit];
+        }
+
         for ($i = 0; $i < strlen($data) && $data[$i] === "\x00"; $i++) {
             $encoded = '1' . $encoded;
         }
+
         return $encoded;
+    }
+
+    /**
+     * The decoder must handle a real P-256 did:key (multicodec 0x1200) and
+     * preserve leading zero bytes, without ext-gmp being loaded.
+     */
+    public function testBase58DecodeHandlesStandardDidKey(): void
+    {
+        $handler = new JwtHandler();
+
+        $res = openssl_pkey_new([
+            'curve_name' => 'prime256v1',
+            'private_key_type' => OPENSSL_KEYTYPE_EC,
+        ]);
+        $details = openssl_pkey_get_details($res);
+        $x = str_pad($details['ec']['x'], 32, "\x00", STR_PAD_LEFT);
+        $y = str_pad($details['ec']['y'], 32, "\x00", STR_PAD_LEFT);
+
+        // Compressed point: 0x02/0x03 prefix by Y parity, then X
+        $compressed = chr((ord($y[31]) & 1) === 0 ? 0x02 : 0x03) . $x;
+        $did = 'did:key:z' . $this->base58Encode("\x80\x24" . $compressed);
+
+        $key = $handler->extractPublicKeyFromDid($did);
+
+        $this->assertInstanceOf(\Firebase\JWT\Key::class, $key);
+    }
+
+    public function testBase58DecodeRejectsInvalidCharacters(): void
+    {
+        $handler = new JwtHandler();
+
+        $this->expectException(VerificationException::class);
+        $this->expectExceptionMessage('Invalid did:key base58 encoding');
+
+        // '0', 'O', 'I' and 'l' are excluded from the base58 alphabet
+        $handler->extractPublicKeyFromDid('did:key:z0OIl0OIl0OIl');
     }
 
     public function testClassHasExpectedMethods(): void

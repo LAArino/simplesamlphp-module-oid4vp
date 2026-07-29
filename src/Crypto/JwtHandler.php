@@ -238,35 +238,43 @@ class JwtHandler
     }
 
     /**
-     * Base58 decode (Bitcoin alphabet). Requires ext-gmp.
+     * Base58 decode (Bitcoin alphabet).
+     *
+     * Uses byte-wise base conversion with carry propagation rather than a
+     * bignum library, so the module has no ext-gmp/ext-bcmath requirement —
+     * several SimpleSAMLphp container images ship neither. Inputs are DID
+     * fragments of a few dozen bytes, where the quadratic cost is irrelevant.
      */
     private function base58Decode(string $input): string|false
     {
         $alphabet = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 
-        $result = gmp_init(0);
-        $base = gmp_init(58);
-
+        $bytes = [];
         for ($i = 0; $i < strlen($input); $i++) {
-            $pos = strpos($alphabet, $input[$i]);
-            if ($pos === false) {
+            $value = strpos($alphabet, $input[$i]);
+            if ($value === false) {
                 return false;
             }
-            $result = gmp_add(gmp_mul($result, $base), gmp_init($pos));
+
+            // bytes = bytes * 58 + value, big-endian, carrying upwards
+            $carry = $value;
+            for ($j = count($bytes) - 1; $j >= 0; $j--) {
+                $carry += $bytes[$j] * 58;
+                $bytes[$j] = $carry & 0xff;
+                $carry >>= 8;
+            }
+            while ($carry > 0) {
+                array_unshift($bytes, $carry & 0xff);
+                $carry >>= 8;
+            }
         }
 
-        $hex = gmp_strval($result, 16);
-        if (strlen($hex) % 2 !== 0) {
-            $hex = '0' . $hex;
-        }
-
-        // Count leading zeros (represented as '1' in base58)
-        $leadingZeros = 0;
+        // Leading '1's encode leading zero bytes
         for ($i = 0; $i < strlen($input) && $input[$i] === '1'; $i++) {
-            $leadingZeros++;
+            array_unshift($bytes, 0);
         }
 
-        return str_repeat("\x00", $leadingZeros) . hex2bin($hex);
+        return $bytes === [] ? '' : pack('C*', ...$bytes);
     }
 
     /**
@@ -280,8 +288,11 @@ class JwtHandler
         if (file_exists($keyPath)) {
             $pem = file_get_contents($keyPath);
         } else {
-            // Try relative to SimpleSAMLphp certdir
-            $certDir = \SimpleSAML\Configuration::getInstance()->getOptionalString('certdir', 'cert/');
+            // Resolve relative to the SimpleSAMLphp certdir. getPathValue() (not
+            // getOptionalString) resolves the configured path against the SSP
+            // base directory — 'certdir' is relative by default and the web
+            // server's working directory is public/, not the install root.
+            $certDir = \SimpleSAML\Configuration::getInstance()->getPathValue('certdir', 'cert/');
             $fullPath = rtrim($certDir, '/') . '/' . basename($keyPath);
             if (!file_exists($fullPath)) {
                 throw new Error\Exception('OID4VP: Signing key not found: ' . $keyPath);
