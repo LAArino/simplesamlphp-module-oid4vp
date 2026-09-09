@@ -3,6 +3,7 @@
 **OID4VP Authentication Module for SimpleSAMLphp**
 **Módulo de autenticación OID4VP para SimpleSAMLphp**
 
+[![Packagist](https://img.shields.io/packagist/v/laarino/simplesamlphp-module-oid4vp)](https://packagist.org/packages/laarino/simplesamlphp-module-oid4vp)
 [![PHP >= 8.0](https://img.shields.io/badge/PHP-%3E%3D%208.0-blue)](https://www.php.net/)
 [![SimpleSAMLphp >= 2.0](https://img.shields.io/badge/SimpleSAMLphp-%3E%3D%202.0-orange)](https://simplesamlphp.org/)
 [![License: EUPL-1.2](https://img.shields.io/badge/License-EUPL--1.2-green)](LICENSE)

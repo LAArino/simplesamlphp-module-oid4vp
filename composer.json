@@ -1,8 +1,35 @@
 {
     "name": "laarino/simplesamlphp-module-oid4vp",
-    "description": "OID4VP (OpenID for Verifiable Presentations) authentication source for SimpleSAMLphp",
+    "description": "OID4VP (OpenID for Verifiable Presentations) authentication source for SimpleSAMLphp, with EBSI and BLUE trust network support",
     "type": "simplesamlphp-module",
     "license": "EUPL-1.2",
+    "keywords": [
+        "simplesamlphp",
+        "simplesamlphp-module",
+        "oid4vp",
+        "openid4vp",
+        "verifiable-credentials",
+        "eudi-wallet",
+        "ebsi",
+        "blue",
+        "dc4eu",
+        "saml",
+        "did"
+    ],
+    "homepage": "https://github.com/LAArino/simplesamlphp-module-oid4vp",
+    "authors": [
+        {
+            "name": "Lluís Alfons Ariño",
+            "email": "lluisalfons.arino@urv.cat",
+            "homepage": "https://github.com/LAArino",
+            "role": "Developer"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/LAArino/simplesamlphp-module-oid4vp/issues",
+        "source": "https://github.com/LAArino/simplesamlphp-module-oid4vp",
+        "docs": "https://github.com/LAArino/simplesamlphp-module-oid4vp/blob/main/docs/GUIA-HABILITACION-Y-TESTING.md"
+    },
     "require": {
         "php": ">=8.0",
         "ext-openssl": "*",
