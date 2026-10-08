@@ -820,14 +820,19 @@ Fix:   Configurar 'datadir' en config/config.php a una ruta fuera de public/.
 
 **"cURL error 60: SSL certificate problem: unable to get local issuer certificate"**
 ```
-Causa: api.blue.rediris.es envia solo su certificado hoja, sin el intermedio
-       GEANT TLS RSA 1 que lo firma. Los navegadores lo descargan por AIA;
-       curl no lo hace, asi que PHP no puede construir la cadena.
-Fix:   Instalar el intermedio en el almacen de CAs del sistema:
-       curl -sO http://crt.harica.gr/HARICA-GEANT-TLS-R1.cer
-       openssl x509 -inform DER -in HARICA-GEANT-TLS-R1.cer \
-         -out /usr/local/share/ca-certificates/harica-geant-tls-r1.crt
-       update-ca-certificates
+Causa: El servidor del registro envia una cadena incompleta (normalmente la
+       hoja sin su intermedio). Los navegadores descargan el intermedio por
+       AIA; curl no lo hace, asi que PHP no puede construir la cadena.
+       Lo sufrio api.blue.rediris.es hasta octubre de 2026; RedIRIS lo
+       corrigio en origen y hoy los tres entornos de BLUE validan sin parche.
+Fix:   Lo correcto es que el servidor envie la cadena completa. Como remedio
+       provisional, anadir el intermedio al almacen del sistema verificandolo
+       antes contra su raiz:
+       openssl x509 -inform DER -in <intermedio>.cer -out /tmp/int.pem
+       openssl verify -CAfile /etc/ssl/certs/<RAIZ>.pem /tmp/int.pem
+       cp /tmp/int.pem /usr/local/share/ca-certificates/ && update-ca-certificates
+Ver:   Comprobar que cadena envia un host:
+       openssl s_client -connect <host>:443 -servername <host> -showcerts
 ```
 
 **"[BLUE] DID not found in any registry" / "[EBSI] DID not found..."**

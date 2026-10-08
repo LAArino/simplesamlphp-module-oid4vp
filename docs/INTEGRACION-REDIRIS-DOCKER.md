@@ -39,12 +39,11 @@ EducationalID de las dos redes:
 | EBSI | `EducationalId` | Asercion SAML emitida (DID y emisor resueltos en Conformance tras 404 en Pilot) |
 
 Para integrarlo de forma soportada quedan estas acciones del lado de RedIRIS, de las
-cuales **dos son bloqueantes**:
+cuales **una es bloqueante**:
 
 | # | Accion | Responsable | Bloqueante |
 |---|---|---|---|
 | 1 | Anadir 3 librerias PHP a la imagen `backend-sso-ssp` | RedIRIS | **Si** |
-| 1b | Cadena TLS de `api.blue.rediris.es` (ver 9.1) | RedIRIS | **Si** |
 | 2 | Anadir `'template_base' => 'baseSSO.twig'` a la config del authsource | RedIRIS | No (cosmetico) |
 | 3 | Tematizar el selector de multiauth | RedIRIS | No (cosmetico) |
 | 4 | Publicar plantilla propia en el tema para la tarjeta de login | RedIRIS | No (opcional) |
@@ -98,8 +97,7 @@ Dos observaciones relevantes:
 
 ## 4. Requisito 1: dependencias PHP en la imagen
 
-**Bloqueante.** El otro punto bloqueante es la cadena TLS de `api.blue.rediris.es`
-(seccion 9.1).
+**Bloqueante.**
 
 El modulo necesita tres librerias que la imagen actual no incluye:
 
@@ -441,46 +439,30 @@ confianza. Con cortafuegos o proxy de salida hay que permitir:
 | BLUE | `api.blue.rediris.es`, `api-pre.blue.rediris.es`, `api-des.blue.rediris.es` |
 | EBSI | `api-pilot.ebsi.eu`, `api-pilot.ebsi.rediris.es`, `api-conformance.ebsi.eu` |
 
-### 9.1 Cadena de certificados de `api.blue.rediris.es`
+### 9.1 Cadena de certificados de `api.blue.rediris.es` (RESUELTO)
 
-**Detectado en una prueba real con wallet: la verificacion falla si no se corrige.**
+**Corregido por RedIRIS en octubre de 2026.** Se conserva porque el sintoma puede
+reaparecer en cualquier host cuya cadena quede incompleta.
 
-`api.blue.rediris.es` presenta **unicamente su certificado hoja**, sin el intermedio que
-lo firma:
-
-```
-subject = CN=*.blue.rediris.es  (RedIRIS)
-issuer  = CN=GEANT TLS RSA 1    (Hellenic Academic and Research Institutions CA)
-```
-
-El intermedio `GEANT TLS RSA 1` no se envia en el handshake. Los navegadores y los sistemas
-moviles lo toleran porque lo descargan por AIA
-(`http://crt.harica.gr/HARICA-GEANT-TLS-R1.cer`), pero **curl no hace esa descarga**, asi
-que PHP dentro del contenedor no puede construir la cadena y la verificacion de la
-credencial aborta con:
+Hasta entonces, `api.blue.rediris.es` presentaba **unicamente su certificado hoja** (RSA,
+firmado por `GEANT TLS RSA 1`) sin enviar el intermedio. Los navegadores y los sistemas
+moviles lo toleran porque lo descargan por AIA, pero **curl no hace esa descarga**, asi que
+PHP no podia construir la cadena y la verificacion abortaba con:
 
 ```
 cURL error 60: SSL certificate problem: unable to get local issuer certificate
 ```
 
-La raiz (`HARICA TLS RSA Root CA 2021`) si esta en el almacen del contenedor; lo que falta
-es exclusivamente el intermedio.
+RedIRIS lo corrigio en origen y ademas sustituyo el certificado: los hosts de BLUE sirven
+ahora uno **ECC** firmado por `GEANT TLS ECC 1` y envian la cadena completa. Comprobado
+desde la imagen base **sin parche alguno** en los tres entornos (PROD, PRE y DES): los tres
+validan correctamente. Por eso el despliegue ya **no** instala ningun intermedio.
 
-**Solucion recomendada (lado servidor, resuelve el problema para todos los clientes):**
-configurar `api.blue.rediris.es` para que envie la cadena completa (hoja + intermedio).
-Es la correccion adecuada y evita que cada consumidor tenga que parchear su almacen.
+Si reapareciera en algun host, la correccion adecuada es siempre del lado del servidor
+—que envie la cadena completa—, y el remedio provisional es anadir su intermedio al
+almacen del contenedor, verificandolo antes contra la raiz correspondiente.
 
-**Solucion en la imagen (mientras tanto):**
-
-```dockerfile
-ADD http://crt.harica.gr/HARICA-GEANT-TLS-R1.cer /tmp/harica-geant.cer
-RUN openssl x509 -inform DER -in /tmp/harica-geant.cer \
-      -out /usr/local/share/ca-certificates/harica-geant-tls-r1.crt \
- && update-ca-certificates \
- && rm /tmp/harica-geant.cer
-```
-
-Comprobacion:
+Comprobacion de cualquier host:
 
 ```bash
 docker exec sso_backend php -r '
@@ -488,8 +470,6 @@ docker exec sso_backend php -r '
   curl_setopt($c, CURLOPT_RETURNTRANSFER, true); curl_exec($c);
   echo curl_error($c) ?: "TLS OK\n";'
 ```
-
-`api-pilot.ebsi.eu` no presenta este problema.
 
 ### 9.2 Acceso desde la wallet
 
