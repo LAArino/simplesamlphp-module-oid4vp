@@ -197,8 +197,8 @@ whose service providers need more can list them in `required_attributes` — but
 demanding more than the schema does rejects credentials that are perfectly valid.
 
 `eduPersonTargetedID` is derived as `md5(credentialSubject.id)`. It is stable per subject
-but **not** per relying party, so it does not provide the pairwise privacy that the
-attribute's name implies.
+but **not** per service provider, so it does not provide the pairwise privacy that the
+attribute's name implies: every SP in the federation receives the same value.
 
 ### Testing
 
@@ -240,7 +240,7 @@ real EUDI wallet.
 - [ ] StatusList2021 revocation checking
 - [ ] Multiple credential types per authentication source (today one type per source)
 - [ ] SD-JWT VC, DCQL and JARM (`direct_post.jwt`) support
-- [ ] Per-relying-party `eduPersonTargetedID`
+- [ ] Per-service-provider `eduPersonTargetedID`
 
 ### License
 

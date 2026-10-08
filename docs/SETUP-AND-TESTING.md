@@ -42,8 +42,8 @@
 ### Outbound connectivity
 
 Verifying credentials from the EBSI and BLUE networks requires outbound HTTPS from the
-IdP to each network's registries. Behind a firewall or an outbound proxy, allow these
-destinations:
+identity provider (IdP) to each network's registries. Behind a firewall or an outbound
+proxy, allow these destinations:
 
 | Network | Destinations |
 |---|---|
@@ -327,7 +327,8 @@ wallet shipped with the module.
 
 ### 7.1 Start the flow from the browser
 
-1. Open a browser and reach an SP that uses your IdP (or use SimpleSAMLphp's own test SP).
+1. Open a browser and reach a service provider (SP) that uses your IdP (or use
+   SimpleSAMLphp's own test SP).
 2. On the MultiAuth screen, pick **"Present EducationalID"**.
 3. The QR page appears with:
    - a QR code,
@@ -545,9 +546,9 @@ urn:oid:0.9.2342.19200300.100.1.1    => ['jgarcia']                    (uid)
 ```
 
 > **On `eduPersonTargetedID`**: the module derives it as `md5(credentialSubject.id)`. It is
-> stable per subject but **not** per relying party, so it does not provide the pairwise
-> privacy the attribute's name implies. Decide whether that suits your federation before
-> going to production.
+> stable per subject but **not** per service provider, so it does not provide the pairwise
+> privacy the attribute's name implies — every SP in the federation receives the same
+> value. Decide whether that suits your federation before going to production.
 
 ### 9.4 Interaction with authproc filters
 
