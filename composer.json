@@ -28,7 +28,7 @@
     "support": {
         "issues": "https://github.com/LAArino/simplesamlphp-module-oid4vp/issues",
         "source": "https://github.com/LAArino/simplesamlphp-module-oid4vp",
-        "docs": "https://github.com/LAArino/simplesamlphp-module-oid4vp/blob/main/docs/GUIA-HABILITACION-Y-TESTING.md"
+        "docs": "https://github.com/LAArino/simplesamlphp-module-oid4vp/blob/main/docs/SETUP-AND-TESTING.md"
     },
     "require": {
         "php": ">=8.0",

@@ -1,5 +1,9 @@
 # Guia de habilitacion y testing del modulo OID4VP
 
+> **Idiomas** — Castellano (este documento) · [English](SETUP-AND-TESTING.md)
+>
+> La version inglesa es la normativa. Al cambiar una, cambiar la otra.
+
 ## Indice
 
 1. [Requisitos previos](#1-requisitos-previos)
@@ -187,6 +191,20 @@ $config = [
 ];
 ```
 
+### 4.2 saml20-idp-hosted.php
+
+Verificar que el IdP usa MultiAuth:
+
+```php
+$metadata['__DYNAMIC:1__'] = [
+    'host' => '__DEFAULT__',
+    'auth' => 'multiauth',      // <-- debe apuntar a 'multiauth'
+    'privatekey'  => 'idp.pem',
+    'certificate' => 'idp.crt',
+    // ... resto de config ...
+];
+```
+
 ### 4.3 Redes de confianza (EBSI y BLUE)
 
 El modulo selecciona el registro segun el metodo del DID del emisor, con cadenas de
@@ -235,20 +253,6 @@ Para apuntar a un entorno concreto, sobreescribir la entrada de esa red:
 | `did:web` | HTTPS segun la especificacion W3C, validando que el `id` del documento coincida |
 | `did:ebsi`, `did:blue` | Registro DID de su red |
 | Otros | Universal Resolver (`dev.uniresolver.io`) — **solo desarrollo** |
-
-### 4.2 saml20-idp-hosted.php
-
-Verificar que el IdP usa MultiAuth:
-
-```php
-$metadata['__DYNAMIC:1__'] = [
-    'host' => '__DEFAULT__',
-    'auth' => 'multiauth',      // <-- debe apuntar a 'multiauth'
-    'privatekey'  => 'idp.pem',
-    'certificate' => 'idp.crt',
-    // ... resto de config ...
-];
-```
 
 ---
 
@@ -327,189 +331,20 @@ Este es el test mas importante. Simula el comportamiento de una EUDI Wallet usan
    - `authState`: el ID de estado SSP
    - `statusUrl`: la URL de polling
 
-### 7.2 Crear un script de wallet simulada
+### 7.2 La wallet simulada
 
-Crear el fichero `test_wallet.php` en cualquier directorio:
+El modulo incluye una en **`tests/test_wallet.php`**. Es la implementacion de referencia
+de este test: no la copies a tus notas, porque una copia diverge. Refleja lo que hacen las
+wallets reales, incluido tomar la audiencia de `client_id` y no de `iss`.
 
-```php
-<?php
-/**
- * Wallet simulada para testing OID4VP.
- *
- * Uso:
- *   php test_wallet.php <request_uri_url>
- *
- * Ejemplo:
- *   php test_wallet.php "https://idp.example.org/simplesaml/module.php/oid4vp/request_uri/550e8400-e29b-41d4-a716-446655440000"
- */
+Que hace:
 
-require_once __DIR__ . '/vendor/autoload.php';
-
-use Firebase\JWT\JWT;
-
-if ($argc < 2) {
-    echo "Uso: php test_wallet.php <request_uri_url>\n";
-    exit(1);
-}
-
-$requestUriUrl = $argv[1];
-
-// --- Paso 1: Descargar el JWT Authorization Request (JAR) ---
-echo "=== Paso 1: GET request_uri ===\n";
-echo "URL: $requestUriUrl\n\n";
-
-$ch = curl_init($requestUriUrl);
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // Solo para testing local
-$jarJwt = curl_exec($ch);
-$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-curl_close($ch);
-
-if ($httpCode !== 200) {
-    echo "ERROR: HTTP $httpCode\n$jarJwt\n";
-    exit(1);
-}
-
-echo "JAR recibido (primeros 100 chars): " . substr($jarJwt, 0, 100) . "...\n\n";
-
-// Decodificar JAR (sin verificar firma — somos la wallet de test)
-$parts = explode('.', $jarJwt);
-$jarPayload = json_decode(base64_decode(strtr($parts[1], '-_', '+/')), true);
-
-echo "JAR claims:\n";
-echo "  iss:           " . ($jarPayload['iss'] ?? '-') . "\n";
-echo "  aud:           " . ($jarPayload['aud'] ?? '-') . "\n";
-echo "  response_type: " . ($jarPayload['response_type'] ?? '-') . "\n";
-echo "  response_mode: " . ($jarPayload['response_mode'] ?? '-') . "\n";
-echo "  response_uri:  " . ($jarPayload['response_uri'] ?? '-') . "\n";
-echo "  nonce:         " . ($jarPayload['nonce'] ?? '-') . "\n";
-echo "  state:         " . ($jarPayload['state'] ?? '-') . "\n";
-echo "  exp:           " . date('Y-m-d H:i:s', $jarPayload['exp'] ?? 0) . "\n\n";
-
-$nonce = $jarPayload['nonce'];
-$state = $jarPayload['state'];
-$responseUri = $jarPayload['response_uri'];
-$verifierId = $jarPayload['iss'];
-
-// --- Paso 2: Construir VP + VC de test ---
-echo "=== Paso 2: Construir VP con EducationalID ===\n";
-
-// Generar claves EC de test en memoria
-$issuerKey = openssl_pkey_new(['curve_name' => 'prime256v1', 'private_key_type' => OPENSSL_KEYTYPE_EC]);
-$holderKey = openssl_pkey_new(['curve_name' => 'prime256v1', 'private_key_type' => OPENSSL_KEYTYPE_EC]);
-
-// Credencial EducationalID de test
-$now = time();
-$vcPayload = [
-    'iss' => 'did:key:zTestIssuer123',
-    'sub' => 'did:key:zTestHolder456',
-    'iat' => $now,
-    'exp' => $now + 86400,
-    'vc' => [
-        '@context' => ['https://www.w3.org/2018/credentials/v1'],
-        'type' => ['VerifiableCredential', 'VerifiableEducationalID'],
-        'issuer' => 'did:key:zTestIssuer123',
-        'issuanceDate' => date('c', $now),
-        'credentialSubject' => [
-            'id' => 'did:key:zTestHolder456',
-            'eduPersonPrincipalName' => 'jgarcia@universidad.es',
-            'schacHomeOrganization' => 'universidad.es',
-            'eduPersonScopedAffiliation' => 'student@universidad.es',
-            'eduPersonPrimaryAffiliation' => 'student',
-            'eduPersonAffiliation' => 'student',
-            'eduPersonAssurance' => 'https://refeds.org/assurance/IAP/low',
-            'displayName' => 'Juan Garcia Lopez',
-            'commonName' => 'Juan Garcia Lopez',
-            'familyName' => 'Garcia Lopez',
-            'firstName' => 'Juan',
-            'mail' => 'jgarcia@universidad.es',
-            'schacPersonalUniqueCode' => 'urn:schac:personalUniqueCode:int:esi:' . md5('jgarcia@universidad.es'),
-            'identifier' => 'jgarcia',
-        ],
-    ],
-];
-
-// Firmar VC JWT
-$vcJwt = JWT::encode($vcPayload, $issuerKey, 'ES256', null, [
-    'alg' => 'ES256',
-    'typ' => 'JWT',
-    'kid' => 'did:key:zTestIssuer123#key-1',
-]);
-
-echo "VC JWT generado (" . strlen($vcJwt) . " bytes)\n";
-echo "  Tipo: VerifiableEducationalID\n";
-echo "  Subject: jgarcia@universidad.es\n\n";
-
-// Construir VP que envuelve la VC
-$vpPayload = [
-    'iss' => 'did:key:zTestHolder456',
-    'aud' => $verifierId,
-    'nonce' => $nonce,
-    'iat' => $now,
-    'exp' => $now + 300,
-    'vp' => [
-        '@context' => ['https://www.w3.org/2018/credentials/v1'],
-        'type' => ['VerifiablePresentation'],
-        'verifiableCredential' => [$vcJwt],
-    ],
-];
-
-$vpJwt = JWT::encode($vpPayload, $holderKey, 'ES256', null, [
-    'alg' => 'ES256',
-    'typ' => 'JWT',
-    'kid' => 'did:key:zTestHolder456#key-1',
-]);
-
-echo "VP JWT generado (" . strlen($vpJwt) . " bytes)\n";
-echo "  aud:   $verifierId\n";
-echo "  nonce: $nonce\n\n";
-
-// Presentation submission (describe donde esta la VC dentro de la VP)
-$presentationSubmission = json_encode([
-    'id' => 'test-submission',
-    'definition_id' => 'educationalid-presentation',
-    'descriptor_map' => [
-        [
-            'id' => 'educationalid-descriptor',
-            'format' => 'jwt_vp',
-            'path' => '$',
-            'path_nested' => [
-                'format' => 'jwt_vc',
-                'path' => '$.vp.verifiableCredential[0]',
-            ],
-        ],
-    ],
-]);
-
-// --- Paso 3: POST direct_post ---
-echo "=== Paso 3: POST direct_post ===\n";
-echo "URL: $responseUri\n";
-echo "Params: vp_token=<jwt>, state=$state, presentation_submission=<json>\n\n";
-
-$ch = curl_init($responseUri);
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_POST, true);
-curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query([
-    'vp_token' => $vpJwt,
-    'presentation_submission' => $presentationSubmission,
-    'state' => $state,
-]));
-$response = curl_exec($ch);
-$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-curl_close($ch);
-
-echo "Respuesta: HTTP $httpCode\n";
-echo "$response\n\n";
-
-if ($httpCode === 200) {
-    echo "*** EXITO: VP verificada correctamente ***\n";
-    echo "El navegador deberia detectar 'completed' en el siguiente poll y completar la autenticacion.\n";
-} else {
-    echo "*** ERROR: La verificacion fallo ***\n";
-    echo "Revisa los logs de SimpleSAMLphp para mas detalles.\n";
-}
-```
+1. Descarga el JWT Authorization Request (JAR) firmado desde `request_uri`.
+2. Imprime sus claims, para comprobar `client_id`, `response_uri`, `nonce` y `state`.
+3. Genera en memoria un par de claves EC P-256 para un emisor y un holder de test.
+4. Construye una credencial EducationalID, la envuelve en una Verifiable Presentation y
+   firma ambas con ES256.
+5. Hace POST a `/direct_post` e informa de la respuesta del verificador.
 
 ### 7.3 Ejecutar el test
 
@@ -522,7 +357,9 @@ if ($httpCode === 200) {
 
 # 3. Ejecutar la wallet simulada
 cd /var/www/html/simplesamlphp/modules/oid4vp/
-php test_wallet.php "https://idp.example.org/simplesaml/module.php/oid4vp/request_uri/<session-id>"
+php tests/test_wallet.php "https://idp.example.org/simplesaml/module.php/oid4vp/request_uri/<session-id>"
+
+# Anadir --insecure (o -k) para omitir la verificacion TLS contra un IdP de test
 ```
 
 ### 7.4 Que esperar
@@ -603,7 +440,7 @@ curl -k -s "$BASE/status/$SESSION_ID" | python3 -m json.tool
 cd /var/www/html/simplesamlphp/modules/oid4vp/
 
 # Instalar dependencias de desarrollo
-composer install --dev
+composer install
 
 # Ejecutar todos los tests
 ./vendor/bin/phpunit
@@ -612,6 +449,7 @@ composer install --dev
 ./vendor/bin/phpunit tests/Mapping/CredentialMapperTest.php
 ./vendor/bin/phpunit tests/Crypto/JwtHandlerTest.php
 ./vendor/bin/phpunit tests/Verification/PresentationVerifierTest.php
+./vendor/bin/phpunit tests/Verification/TrustChainResolverTest.php
 ./vendor/bin/phpunit tests/Store/SessionStoreTest.php
 ```
 
@@ -622,21 +460,25 @@ PHPUnit 10.x
 
 Testing OID4VP Module Tests
 
-...............                                  15 / 15 (100%)
+................................................  48 / 48 (100%)
 
-Time: 00:00.045, Memory: 12.00 MB
+Time: 00:00.150, Memory: 12.00 MB
 
-OK (15 tests, 35 assertions)
+OK (48 tests, 113 assertions)
 ```
 
 ### 8.3 Tests incluidos
 
 | Fichero | Tests | Que verifica |
 |---|---|---|
-| `CredentialMapperTest` | 10 | Mapeo friendly/OID, array values, campos requeridos, overrides custom |
-| `JwtHandlerTest` | 5 | Decodificacion JWT header, DID method no soportado, multibase invalido |
+| `TrustChainResolverTest` | 16 | Seleccion de red por metodo DID, cadenas de reintento EBSI y BLUE, consultas al TIR, resolucion `did:jwk` y `did:web`, semantica de confianza |
+| `CredentialMapperTest` | 14 | Mapeo friendly/OID, array values, campos requeridos, overrides custom |
+| `JwtHandlerTest` | 10 | Decodificacion JWT header, los dos formatos de `did:key`, base58 ida y vuelta, metodos no soportados |
 | `PresentationVerifierTest` | 5 | JWT invalido, algoritmo incorrecto, kid faltante, constructor |
 | `SessionStoreTest` | 3 | Clase existe, constructor timeout, metodos publicos |
+
+Los tests de red usan respuestas HTTP simuladas, asi que no tocan los registros reales de
+EBSI ni de BLUE.
 
 ---
 
@@ -790,7 +632,8 @@ Mensajes clave:
 | INFO | `VP verified successfully for session <uuid>` | Flujo exitoso |
 | INFO | `Authentication completed successfully` | SAML assertion generada |
 | WARNING | `VP verification failed: ...` | Error en verificacion de VP/VC |
-| WARNING | `No trusted issuers or EBSI registry configured` | Modo desarrollo activo |
+| INFO | `[EBSI] DID not found, trying Conformance` | Cadena de reintento en marcha — informativo |
+| WARNING | `No trust source configured for issuer DID method` | Modo desarrollo activo |
 | ERROR | `Failed to load auth state: ...` | Cookie SSP expirada |
 
 ### 11.2 Problemas comunes
@@ -940,7 +783,7 @@ find /var/www/html/simplesamlphp/data/oid4vp_sessions/ -name "*.json" -mmin +6 -
 
 ```bash
 # Las rutas deben estar en:
-cat /var/www/html/simplesamlphp/modules/oid4vp/routing/routes.yaml
+cat /var/www/html/simplesamlphp/modules/oid4vp/routing/routes/routes.yaml
 
 # Probar que los endpoints responden:
 curl -k -s -o /dev/null -w "%{http_code}" "$BASE/qrpage"

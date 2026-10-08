@@ -216,8 +216,9 @@ A simulated wallet script is available at `tests/test_wallet.php` for end-to-end
 
 | Document | Contents |
 |---|---|
-| [Setup and testing guide](docs/GUIA-HABILITACION-Y-TESTING.md) | Full deployment walkthrough, trust network configuration, manual and unit testing, troubleshooting (Spanish) |
-| [RedIRIS Docker integration](docs/INTEGRACION-REDIRIS-DOCKER.md) | What the RedIRIS team needs to do to ship this module in the dockerized IdP: image dependencies, theming, env vars, volumes (Spanish) |
+| [Setup and testing guide](docs/SETUP-AND-TESTING.md) | Full deployment walkthrough, trust network configuration, manual and unit testing, troubleshooting |
+| [Guía de habilitación y testing](docs/GUIA-HABILITACION-Y-TESTING.md) | The same guide in Spanish |
+| [RedIRIS Docker integration](docs/INTEGRACION-REDIRIS-DOCKER.md) | How the module fits into RedIRIS's dockerized IdP; the deployment itself lives in `rediris-es/idp_onprem_blue` (Spanish) |
 
 ### Roadmap
 
@@ -452,7 +453,8 @@ Hay un script de wallet simulada en `tests/test_wallet.php` para testing manual 
 | Documento | Contenido |
 |---|---|
 | [Guía de habilitación y testing](docs/GUIA-HABILITACION-Y-TESTING.md) | Despliegue completo, configuración de redes de confianza, testing manual y unitario, diagnóstico de problemas |
-| [Integración en el Docker de RedIRIS](docs/INTEGRACION-REDIRIS-DOCKER.md) | Qué debe hacer el equipo de RedIRIS para incluir el módulo en el IdP dockerizado: dependencias de la imagen, tematización, variables de entorno, volúmenes |
+| [Setup and testing guide](docs/SETUP-AND-TESTING.md) | La misma guía en inglés (versión normativa) |
+| [Integración en el Docker de RedIRIS](docs/INTEGRACION-REDIRIS-DOCKER.md) | Cómo encaja el módulo en el IdP dockerizado de RedIRIS; el despliegue vive en `rediris-es/idp_onprem_blue` |
 
 ### Hoja de ruta
 
